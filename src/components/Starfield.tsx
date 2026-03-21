@@ -247,35 +247,20 @@ export default function Starfield() {
 
       // Cute theme: occasional plushie floaters
       if (isCute) {
-        // Spawn very occasionally (~every 3-5 seconds at 60fps)
-        if (Math.random() < 0.018) {
-          const edge = Math.random();
-          let startX: number, startY: number;
-          if (edge < 0.5) {
-            // From bottom
-            startX = Math.random() * canvas!.width;
-            startY = canvas!.height + 20;
-          } else if (edge < 0.75) {
-            // From left
-            startX = -20;
-            startY = canvas!.height * 0.3 + Math.random() * canvas!.height * 0.5;
-          } else {
-            // From right
-            startX = canvas!.width + 20;
-            startY = canvas!.height * 0.3 + Math.random() * canvas!.height * 0.5;
-          }
+        // Spawn frequently, anywhere on screen
+        if (Math.random() < 0.02) {
           cuteFloaters.push({
-            x: startX,
-            y: startY,
+            x: Math.random() * canvas!.width,
+            y: Math.random() * canvas!.height,
             emoji: cuteEmojis[Math.floor(Math.random() * cuteEmojis.length)],
-            size: 16 + Math.random() * 14,
+            size: 20 + Math.random() * 16,
             life: 0,
-            maxLife: 180 + Math.random() * 120,
+            maxLife: 240 + Math.random() * 180,
             wobblePhase: Math.random() * Math.PI * 2,
             wobbleSpeed: 0.02 + Math.random() * 0.03,
-            floatSpeed: 0.3 + Math.random() * 0.4,
+            floatSpeed: 0.15 + Math.random() * 0.25,
             rotation: 0,
-            rotationSpeed: (Math.random() - 0.5) * 0.02,
+            rotationSpeed: (Math.random() - 0.5) * 0.015,
           });
         }
 
@@ -299,8 +284,8 @@ export default function Starfield() {
           } else {
             alpha = 1;
           }
-          // Keep it subtle
-          alpha *= 0.45;
+          // Visible but not overwhelming
+          alpha *= 0.65;
 
           ctx!.save();
           ctx!.translate(f.x, f.y);
