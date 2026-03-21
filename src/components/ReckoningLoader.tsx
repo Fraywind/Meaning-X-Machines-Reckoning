@@ -2,60 +2,51 @@
 
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Brain, Network, AlertTriangle, Eye, Send, ChevronDown } from "lucide-react";
+import { Brain, Network, AlertTriangle, Eye, Layers, Sparkles, Send, ChevronDown } from "lucide-react";
 import { useStore } from "@/store/useStore";
 
 const phases = [
-  { icon: Brain, label: "Analyzing goal structure...", duration: 3000 },
-  { icon: Network, label: "Mapping decision pathways...", duration: 4000 },
-  { icon: AlertTriangle, label: "Identifying value conflicts...", duration: 4000 },
-  { icon: Eye, label: "Surfacing blind spots...", duration: 5000 },
+  { icon: Brain, label: "Analyzing goal structure..." },
+  { icon: Network, label: "Mapping decision pathways..." },
+  { icon: Layers, label: "Weighing trade-offs..." },
+  { icon: AlertTriangle, label: "Identifying value conflicts..." },
+  { icon: Eye, label: "Surfacing blind spots..." },
+  { icon: Sparkles, label: "Assembling your decision tree..." },
 ];
 
+// Each phase advances after this many ms (cumulative pacing)
+const PHASE_INTERVAL = 2500;
+
 export default function ReckoningLoader() {
-  const { isDecomposing, loadingNotes, setLoadingNotes, goalText, nodes, values, addNodes, addValues, setCritique, setIsDecomposing } = useStore();
+  const { isDecomposing, loadingNotes, setLoadingNotes } = useStore();
   const [phaseIndex, setPhaseIndex] = useState(0);
-  const [elapsed, setElapsed] = useState(0);
   const [showNotes, setShowNotes] = useState(false);
-  const startTime = useRef(Date.now());
   const noteRef = useRef<HTMLTextAreaElement>(null);
 
-  // Cycle through phases
   useEffect(() => {
     if (!isDecomposing) {
       setPhaseIndex(0);
-      setElapsed(0);
       setShowNotes(false);
       return;
     }
 
-    startTime.current = Date.now();
+    setPhaseIndex(0);
 
     const interval = setInterval(() => {
-      const now = Date.now();
-      const diff = now - startTime.current;
-      setElapsed(diff);
-
-      // Determine phase based on cumulative durations
-      let cumulative = 0;
-      for (let i = 0; i < phases.length; i++) {
-        cumulative += phases[i].duration;
-        if (diff < cumulative) {
-          setPhaseIndex(i);
-          return;
+      setPhaseIndex((prev) => {
+        // Cycle through phases continuously so it never looks frozen
+        if (prev >= phases.length - 1) {
+          return phases.length - 3; // loop back a couple phases to keep movement
         }
-      }
-      // Stay on last phase if still loading
-      setPhaseIndex(phases.length - 1);
-    }, 200);
+        return prev + 1;
+      });
+    }, PHASE_INTERVAL);
 
     return () => clearInterval(interval);
   }, [isDecomposing]);
 
   if (!isDecomposing) return null;
 
-  const totalEstimated = phases.reduce((sum, p) => sum + p.duration, 0);
-  const progress = Math.min(elapsed / totalEstimated, 0.95); // Cap at 95% until done
   const CurrentIcon = phases[phaseIndex].icon;
 
   return (
@@ -90,30 +81,38 @@ export default function ReckoningLoader() {
                 </motion.div>
               </AnimatePresence>
               <div className="text-[10px] text-cosmos-muted mt-0.5">
-                Step {phaseIndex + 1} of {phases.length}
+                AI is reckoning — this takes a moment
               </div>
             </div>
           </div>
 
-          {/* Progress bar */}
+          {/* Continuous progress bar — indeterminate shimmer */}
           <div className="w-full h-1.5 bg-cosmos-border rounded-full overflow-hidden">
             <motion.div
               className="h-full rounded-full loading-shimmer"
-              initial={{ width: "0%" }}
-              animate={{ width: `${progress * 100}%` }}
-              transition={{ duration: 0.5, ease: "easeOut" }}
+              animate={{
+                width: ["20%", "70%", "40%", "85%", "55%", "90%"],
+              }}
+              transition={{
+                duration: 6,
+                repeat: Infinity,
+                ease: "easeInOut",
+              }}
             />
           </div>
 
           {/* Phase dots */}
-          <div className="flex justify-between mt-2 px-1">
+          <div className="flex justify-center gap-1.5 mt-2">
             {phases.map((_, i) => (
-              <div
+              <motion.div
                 key={i}
-                className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${
-                  i <= phaseIndex
-                    ? "bg-cosmos-glow"
-                    : "bg-cosmos-border"
+                animate={{
+                  scale: i === phaseIndex ? 1.3 : 1,
+                  opacity: i === phaseIndex ? 1 : i <= phaseIndex ? 0.6 : 0.2,
+                }}
+                transition={{ duration: 0.3 }}
+                className={`w-1.5 h-1.5 rounded-full ${
+                  i <= phaseIndex ? "bg-cosmos-glow" : "bg-cosmos-border"
                 }`}
               />
             ))}
