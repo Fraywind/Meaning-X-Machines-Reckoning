@@ -243,70 +243,178 @@ export default function NodeDetailPanel({ node }: Props) {
                 </div>
               )}
 
-              {/* Options */}
-              <div className="space-y-2 mb-3">
-                <div className="flex items-center justify-between">
-                  <div className="text-xs font-medium text-cosmos-judgment uppercase tracking-wider">
-                    Choose your path
-                  </div>
-                  <div className="text-[10px] text-cosmos-muted/50">Select one</div>
-                </div>
+              {/* Options — or free-text fallback */}
+              {node.options && node.options.length > 0 ? (
+                <>
+                  <div className="space-y-2 mb-3">
+                    <div className="flex items-center justify-between">
+                      <div className="text-xs font-medium text-cosmos-judgment uppercase tracking-wider">
+                        Choose your path
+                      </div>
+                      <div className="text-[10px] text-cosmos-muted/50">Select one</div>
+                    </div>
 
-                {node.options?.map((option, index) => (
-                  <button
-                    key={option.id}
-                    onClick={() => {
-                      setSelectedOptionId(option.id);
-                      setShowJudgmentClarify(false);
-                    }}
-                    className={`w-full text-left p-3.5 rounded-lg border transition-all ${
-                      selectedOptionId === option.id
-                        ? "border-cosmos-judgment bg-cosmos-judgment/10 ring-1 ring-cosmos-judgment/30"
-                        : "border-cosmos-border hover:border-cosmos-judgment/30 bg-cosmos-bg"
-                    }`}
-                  >
-                    <div className="flex items-start gap-2.5">
-                      <div
-                        className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 transition-all ${
+                    {node.options.map((option, index) => (
+                      <button
+                        key={option.id}
+                        onClick={() => {
+                          setSelectedOptionId(option.id);
+                          setShowJudgmentClarify(false);
+                        }}
+                        className={`w-full text-left p-3.5 rounded-lg border transition-all ${
                           selectedOptionId === option.id
-                            ? "border-cosmos-judgment bg-cosmos-judgment/20"
-                            : "border-cosmos-border"
+                            ? "border-cosmos-judgment bg-cosmos-judgment/10 ring-1 ring-cosmos-judgment/30"
+                            : "border-cosmos-border hover:border-cosmos-judgment/30 bg-cosmos-bg"
                         }`}
                       >
-                        {selectedOptionId === option.id && (
-                          <CheckCircle2 className="w-3.5 h-3.5 text-cosmos-judgment" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-xs font-medium text-cosmos-text">
-                          {String.fromCharCode(65 + index)}. {option.label}
-                        </div>
-                        <div className="text-[11px] text-cosmos-muted mt-1">{option.description}</div>
-                        {option.tradeoffs.length > 0 && (
-                          <div className="mt-1.5">
-                            <div className="text-[10px] text-cosmos-judgment/70">Trade-offs:</div>
-                            <ul className="text-[10px] text-cosmos-muted space-y-0.5">
-                              {option.tradeoffs.map((t, i) => (
-                                <li key={i}>&bull; {t}</li>
-                              ))}
-                            </ul>
+                        <div className="flex items-start gap-2.5">
+                          <div
+                            className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 transition-all ${
+                              selectedOptionId === option.id
+                                ? "border-cosmos-judgment bg-cosmos-judgment/20"
+                                : "border-cosmos-border"
+                            }`}
+                          >
+                            {selectedOptionId === option.id && (
+                              <CheckCircle2 className="w-3.5 h-3.5 text-cosmos-judgment" />
+                            )}
                           </div>
-                        )}
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-xs font-medium text-cosmos-text">
+                              {String.fromCharCode(65 + index)}. {option.label}
+                            </div>
+                            <div className="text-[11px] text-cosmos-muted mt-1">{option.description}</div>
+                            {option.tradeoffs.length > 0 && (
+                              <div className="mt-1.5">
+                                <div className="text-[10px] text-cosmos-judgment/70">Trade-offs:</div>
+                                <ul className="text-[10px] text-cosmos-muted space-y-0.5">
+                                  {option.tradeoffs.map((t, i) => (
+                                    <li key={i}>&bull; {t}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
 
-              {/* Confirm selection */}
-              {selectedOptionId && !showJudgmentClarify && (
-                <motion.div
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                >
+                  {/* Confirm selection */}
+                  {selectedOptionId && !showJudgmentClarify && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                    >
+                      <button
+                        onClick={handleResolveJudgment}
+                        disabled={isResolving}
+                        className="w-full py-2.5 bg-cosmos-judgment/20 border border-cosmos-judgment/40 rounded-lg text-cosmos-judgment font-medium text-sm hover:bg-cosmos-judgment/30 transition-all disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      >
+                        {isResolving ? (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            Processing...
+                          </>
+                        ) : (
+                          <>
+                            Confirm choice
+                            <ArrowRight className="w-3.5 h-3.5" />
+                          </>
+                        )}
+                      </button>
+                    </motion.div>
+                  )}
+
+                  {/* Divider */}
+                  <div className="my-4 flex items-center gap-3">
+                    <div className="flex-1 h-px bg-cosmos-border" />
+                    <span className="text-[10px] text-cosmos-muted/40">or</span>
+                    <div className="flex-1 h-px bg-cosmos-border" />
+                  </div>
+
+                  {/* Clarify / custom answer */}
+                  {!showJudgmentClarify ? (
+                    <button
+                      onClick={() => {
+                        setShowJudgmentClarify(true);
+                        setSelectedOptionId(null);
+                      }}
+                      className="w-full py-2.5 px-4 border border-cosmos-border rounded-lg text-cosmos-muted text-xs hover:border-cosmos-glow/30 hover:text-cosmos-glow transition-all flex items-center justify-center gap-2"
+                    >
+                      <MessageSquare className="w-3.5 h-3.5" />
+                      None of these fit — let me clarify
+                    </button>
+                  ) : (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      className="space-y-2"
+                    >
+                      <div className="text-xs text-cosmos-glow font-medium">Redirect this decision</div>
+                      <p className="text-[10px] text-cosmos-muted/60">
+                        Explain what the AI got wrong or what it&apos;s missing.
+                      </p>
+                      <textarea
+                        value={judgmentClarifyText}
+                        onChange={(e) => setJudgmentClarifyText(e.target.value)}
+                        placeholder="e.g., &quot;This doesn't apply because...&quot; or &quot;My situation is actually...&quot;"
+                        className="w-full bg-cosmos-bg border border-cosmos-border rounded-lg px-3 py-2.5 text-xs text-cosmos-text placeholder:text-cosmos-muted/30 focus:outline-none focus:border-cosmos-glow/50 resize-none transition-all"
+                        rows={3}
+                        autoFocus
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          onClick={handleJudgmentClarify}
+                          disabled={!judgmentClarifyText.trim() || isResolving}
+                          className="flex-1 py-2 bg-cosmos-glow/20 border border-cosmos-glow/30 rounded-lg text-cosmos-glow text-xs font-medium hover:bg-cosmos-glow/30 transition-all disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                        >
+                          {isResolving ? (
+                            <>
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                              Rethinking...
+                            </>
+                          ) : (
+                            <>
+                              Send
+                              <ArrowRight className="w-3 h-3" />
+                            </>
+                          )}
+                        </button>
+                        <button
+                          onClick={() => {
+                            setShowJudgmentClarify(false);
+                            setJudgmentClarifyText("");
+                          }}
+                          className="px-4 py-2 border border-cosmos-border rounded-lg text-cosmos-muted text-xs hover:border-cosmos-muted/50 transition-all"
+                        >
+                          Back
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </>
+              ) : (
+                /* No preset options — give user a free-text input to state their decision */
+                <div className="space-y-3">
+                  <div className="p-3 bg-cosmos-judgment/5 border border-cosmos-judgment/20 rounded-lg">
+                    <div className="text-xs font-medium text-cosmos-judgment mb-1">Your call</div>
+                    <p className="text-[11px] text-cosmos-muted">
+                      This decision depends on your values and context. Tell the AI what you want to do,
+                      and it will map out the consequences.
+                    </p>
+                  </div>
+                  <textarea
+                    value={judgmentClarifyText}
+                    onChange={(e) => setJudgmentClarifyText(e.target.value)}
+                    placeholder="e.g., &quot;I want to focus on US only for now&quot; or &quot;We'll target both US and EU markets&quot;"
+                    className="w-full bg-cosmos-bg border border-cosmos-border rounded-lg px-3 py-2.5 text-xs text-cosmos-text placeholder:text-cosmos-muted/30 focus:outline-none focus:border-cosmos-glow/50 resize-none transition-all"
+                    rows={3}
+                    autoFocus
+                  />
                   <button
-                    onClick={handleResolveJudgment}
-                    disabled={isResolving}
+                    onClick={handleJudgmentClarify}
+                    disabled={!judgmentClarifyText.trim() || isResolving}
                     className="w-full py-2.5 bg-cosmos-judgment/20 border border-cosmos-judgment/40 rounded-lg text-cosmos-judgment font-medium text-sm hover:bg-cosmos-judgment/30 transition-all disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
                     {isResolving ? (
@@ -316,80 +424,12 @@ export default function NodeDetailPanel({ node }: Props) {
                       </>
                     ) : (
                       <>
-                        Confirm choice
+                        Submit my decision
                         <ArrowRight className="w-3.5 h-3.5" />
                       </>
                     )}
                   </button>
-                </motion.div>
-              )}
-
-              {/* Divider */}
-              <div className="my-4 flex items-center gap-3">
-                <div className="flex-1 h-px bg-cosmos-border" />
-                <span className="text-[10px] text-cosmos-muted/40">or</span>
-                <div className="flex-1 h-px bg-cosmos-border" />
-              </div>
-
-              {/* Clarify / custom answer */}
-              {!showJudgmentClarify ? (
-                <button
-                  onClick={() => {
-                    setShowJudgmentClarify(true);
-                    setSelectedOptionId(null);
-                  }}
-                  className="w-full py-2.5 px-4 border border-cosmos-border rounded-lg text-cosmos-muted text-xs hover:border-cosmos-glow/30 hover:text-cosmos-glow transition-all flex items-center justify-center gap-2"
-                >
-                  <MessageSquare className="w-3.5 h-3.5" />
-                  None of these fit &mdash; let me clarify
-                </button>
-              ) : (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  className="space-y-2"
-                >
-                  <div className="text-xs text-cosmos-glow font-medium">Redirect this decision</div>
-                  <p className="text-[10px] text-cosmos-muted/60">
-                    Explain what the AI got wrong or what it&apos;s missing.
-                  </p>
-                  <textarea
-                    value={judgmentClarifyText}
-                    onChange={(e) => setJudgmentClarifyText(e.target.value)}
-                    placeholder="e.g., &quot;This doesn't apply because...&quot; or &quot;My situation is actually...&quot;"
-                    className="w-full bg-cosmos-bg border border-cosmos-border rounded-lg px-3 py-2.5 text-xs text-cosmos-text placeholder:text-cosmos-muted/30 focus:outline-none focus:border-cosmos-glow/50 resize-none transition-all"
-                    rows={3}
-                    autoFocus
-                  />
-                  <div className="flex gap-2">
-                    <button
-                      onClick={handleJudgmentClarify}
-                      disabled={!judgmentClarifyText.trim() || isResolving}
-                      className="flex-1 py-2 bg-cosmos-glow/20 border border-cosmos-glow/30 rounded-lg text-cosmos-glow text-xs font-medium hover:bg-cosmos-glow/30 transition-all disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                    >
-                      {isResolving ? (
-                        <>
-                          <Loader2 className="w-3 h-3 animate-spin" />
-                          Rethinking...
-                        </>
-                      ) : (
-                        <>
-                          Send
-                          <ArrowRight className="w-3 h-3" />
-                        </>
-                      )}
-                    </button>
-                    <button
-                      onClick={() => {
-                        setShowJudgmentClarify(false);
-                        setJudgmentClarifyText("");
-                      }}
-                      className="px-4 py-2 border border-cosmos-border rounded-lg text-cosmos-muted text-xs hover:border-cosmos-muted/50 transition-all"
-                    >
-                      Back
-                    </button>
-                  </div>
-                </motion.div>
+                </div>
               )}
             </div>
           )}
@@ -443,7 +483,7 @@ export default function NodeDetailPanel({ node }: Props) {
           {node.valueImplications && node.valueImplications.length > 0 && (
             <div className="mb-5">
               <div className="text-xs font-medium text-cosmos-glow/80 uppercase tracking-wider mb-2">
-                This choice reveals your values
+                Values at stake in this decision
               </div>
               <ul className="space-y-1">
                 {node.valueImplications.map((v, i) => (

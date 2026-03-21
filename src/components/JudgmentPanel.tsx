@@ -298,7 +298,7 @@ export default function JudgmentPanel({ node }: Props) {
           {node.valueImplications && node.valueImplications.length > 0 && (
             <div className="mt-6 p-3 bg-cosmos-glow/5 border border-cosmos-glow/20 rounded-lg">
               <div className="text-xs font-medium text-cosmos-glow mb-1">
-                This choice reveals your values
+                Values at stake in this decision
               </div>
               <ul className="text-xs text-cosmos-muted space-y-0.5">
                 {node.valueImplications.map((v, i) => (
