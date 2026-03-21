@@ -137,7 +137,7 @@ export default function GoalInput() {
         <div className="text-xs tracking-[0.3em] text-white font-display uppercase select-none"
           style={{ writingMode: "vertical-rl", textOrientation: "mixed" }}
         >
-          A T561 Project
+          A Meaning &times; Machines Project
         </div>
       </motion.div>
 
@@ -251,10 +251,15 @@ export default function GoalInput() {
                       </p>
                     </div>
 
-                    <p className="text-[11px] text-cosmos-muted/40 pt-1">
-                      Based on: Smith, B. C. (2019). <em>The Promise of Artificial Intelligence: Reckoning and Judgment.</em> MIT Press.
-                      &nbsp;|&nbsp; Weizenbaum, J. (1976). <em>Computer Power and Human Reason.</em>
-                    </p>
+                    <div className="text-[11px] text-cosmos-muted/40 pt-3 border-t border-cosmos-border/20 space-y-2">
+                      <p>
+                        Based on: <a href="https://www.youtube.com/watch?v=8t5Jg7PthFI" target="_blank" rel="noopener noreferrer" className="text-cosmos-glow/60 hover:text-cosmos-glow underline underline-offset-2 transition-colors">Smith, B. C. (2020). <em>Reckoning and Judgement: The Promise of AI.</em></a>
+                        &nbsp;|&nbsp; Weizenbaum, J. (1976). <em>Computer Power and Human Reason.</em>
+                      </p>
+                      <p>
+                        Recommended reading: <a href="https://www.theatlantic.com/technology/2026/02/words-without-consequence/685974/" target="_blank" rel="noopener noreferrer" className="text-cosmos-glow/60 hover:text-cosmos-glow underline underline-offset-2 transition-colors">Roy, D. (2026). &ldquo;Words Without Consequence: What does it mean to have speech without a speaker?&rdquo; <em>The Atlantic.</em></a>
+                      </p>
+                    </div>
                   </div>
                 </motion.div>
               )}
