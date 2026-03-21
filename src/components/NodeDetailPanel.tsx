@@ -72,7 +72,7 @@ export default function NodeDetailPanel({ node }: Props) {
   const parent = node.parentId ? nodes[node.parentId] : null;
 
   const canClarify = node.type === "reckoning" || node.type === "goal";
-  const isJudgmentPending = node.type === "judgment" && node.status === "conflict";
+  const isJudgmentPending = node.type === "judgment" && node.status !== "resolved";
 
   const handleClarify = async () => {
     if (!clarifyText.trim()) return;

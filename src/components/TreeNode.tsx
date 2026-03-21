@@ -129,7 +129,7 @@ function TreeNode({ data }: NodeProps<DecisionNode>) {
         rounded-xl ${borderWidth} ${bgClass} backdrop-blur-sm
         ${borderColor} ${glowClass} ${sizeClass} ${opacityClass}
         cursor-pointer hover:brightness-110 transition-all
-        ${data.type === "judgment" && data.status === "conflict" ? "animate-pulse-glow" : ""}
+        ${data.type === "judgment" && data.status !== "resolved" ? "animate-pulse-glow" : ""}
       `}
     >
       <Handle type="target" position={Position.Left} className="!bg-cosmos-glow !w-2 !h-2" />
@@ -140,7 +140,7 @@ function TreeNode({ data }: NodeProps<DecisionNode>) {
           <div className={`${titleClass} text-cosmos-text truncate`}>{data.label}</div>
           <div className={descClass}>{data.description}</div>
 
-          {data.type === "judgment" && data.status === "conflict" && (
+          {data.type === "judgment" && data.status !== "resolved" && (
             <div
               onClick={handleDecideClick}
               className={`mt-3 flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-cosmos-judgment/15 border border-cosmos-judgment/40 hover:bg-cosmos-judgment/25 transition-all cursor-pointer ${depth >= 3 ? "text-[10px]" : "text-xs"}`}

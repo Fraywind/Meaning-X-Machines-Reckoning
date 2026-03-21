@@ -33,7 +33,7 @@ function SessionCard({
     (n) => n.type === "resolved"
   ).length;
   const pendingCount = Object.values(session.nodes).filter(
-    (n) => n.type === "judgment" && n.status === "conflict"
+    (n) => n.type === "judgment" && n.status !== "resolved"
   ).length;
 
   return (

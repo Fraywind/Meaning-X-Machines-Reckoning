@@ -125,11 +125,11 @@ export default function ReckoningSummary() {
     const judgmentNodes = nodeList.filter(
       (n) =>
         n.type === "resolved" ||
-        (n.type === "judgment" && n.status === "conflict"),
+        (n.type === "judgment" && n.status !== "resolved"),
     );
     const resolvedNodes = nodeList.filter((n) => n.type === "resolved");
     const pendingJudgments = nodeList.filter(
-      (n) => n.type === "judgment" && n.status === "conflict",
+      (n) => n.type === "judgment" && n.status !== "resolved",
     );
     const blindSpots = nodeList.flatMap((n) => n.blindSpots || []);
 

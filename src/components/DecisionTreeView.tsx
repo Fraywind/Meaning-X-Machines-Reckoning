@@ -104,7 +104,7 @@ function layoutTree(nodes: Record<string, DecisionNode>): {
         id: `${n.parentId}-${n.id}`,
         source: n.parentId,
         target: n.id,
-        animated: n.status === "conflict" || n.type === "judgment",
+        animated: n.status !== "resolved" || n.type === "judgment",
         style: {
           stroke:
             n.type === "judgment"
