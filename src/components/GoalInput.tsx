@@ -167,7 +167,7 @@ export default function GoalInput() {
               AI maps the terrain. You choose the path.
             </p>
             <div className="mt-3 flex items-center justify-center gap-6 text-xs text-cosmos-muted/50">
-              <span>Decompose</span>
+              <span>Describe</span>
               <span className="w-1 h-1 rounded-full bg-cosmos-glow/30" />
               <span>Deliberate</span>
               <span className="w-1 h-1 rounded-full bg-cosmos-glow/30" />
