@@ -119,7 +119,7 @@ export default function GoalInput() {
   ];
 
   return (
-    <div className="relative">
+    <div className="relative h-screen overflow-y-auto">
       <Starfield />
 
       {/* Theme switcher — top right */}
@@ -184,7 +184,7 @@ export default function GoalInput() {
           >
             <button
               onClick={() => setShowAbout(!showAbout)}
-              className="mx-auto flex items-center gap-2 px-4 py-2 text-xs text-cosmos-muted/60 hover:text-cosmos-glow border border-cosmos-border/30 hover:border-cosmos-glow/20 rounded-xl transition-all"
+              className="mx-auto flex items-center gap-2 px-4 py-2 text-xs text-cosmos-muted hover:text-cosmos-glow border border-cosmos-border/50 hover:border-cosmos-glow/20 rounded-xl transition-all"
             >
               <BookOpen className="w-3.5 h-3.5" />
               What is this &amp; how does it work?
@@ -383,11 +383,11 @@ export default function GoalInput() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 1.2, duration: 1 }}
-            className="mt-14 text-center"
+            className="mt-14 pb-10 text-center"
           >
             <div className="inline-flex items-start gap-2 px-4 py-2.5 rounded-lg bg-cosmos-surface/40 border border-cosmos-border/40">
-              <ShieldAlert className="w-3.5 h-3.5 text-cosmos-muted/40 mt-0.5 shrink-0" />
-              <p className="text-xs text-cosmos-muted/40 leading-relaxed text-left">
+              <ShieldAlert className="w-3.5 h-3.5 text-cosmos-muted/70 mt-0.5 shrink-0" />
+              <p className="text-xs text-cosmos-muted/70 leading-relaxed text-left">
                 Your input is processed by AI. Avoid sharing sensitive personal information,
                 passwords, or confidential data. Responses are generated and may not always be accurate.
               </p>
