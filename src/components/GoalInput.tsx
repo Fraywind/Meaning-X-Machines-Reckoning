@@ -191,7 +191,7 @@ export default function GoalInput() {
         transition={{ delay: 1, duration: 1 }}
         className="fixed left-6 top-1/2 -translate-y-1/2 z-20"
       >
-        <div className="text-xs tracking-[0.3em] text-white font-display uppercase select-none"
+        <div className="text-xs tracking-[0.3em] text-cosmos-text font-display uppercase select-none"
           style={{ writingMode: "vertical-rl", textOrientation: "mixed" }}
         >
           A Meaning &times; Machines Project
@@ -265,8 +265,8 @@ export default function GoalInput() {
                       </h3>
                       <p>
                         Reckoning is a thinking tool. You describe a complex goal, and the AI breaks it down
-                        into a map of sub-decisions, trade-offs, and consequences you might not have seen coming.
-                        It helps you see tradeoffs clearly and inform your strategy before you commit.
+                        into a map of sub-decisions, cascading consequences, and paths you might not have seen coming.
+                        It helps you simulate counterfactuals and explore possible outcomes before you commit.
                         But here&apos;s the key part: <span className="text-cosmos-text">whenever a decision hinges on
                         human values or priorities, the AI stops and asks you.</span> It surfaces the tradeoff,
                         but never makes the call for you.
@@ -319,7 +319,7 @@ export default function GoalInput() {
                       </p>
                       <p className="text-cosmos-muted/50 text-[10px] uppercase tracking-wider pt-2">Recommended read</p>
                       <p>
-                        <a href="https://www.theatlantic.com/technology/2026/02/words-without-consequence/685974/" target="_blank" rel="noopener noreferrer" className="text-cosmos-glow/60 hover:text-cosmos-glow underline underline-offset-2 transition-colors">Roy, D. (2026). &ldquo;Words Without Consequence: What does it mean to have speech without a speaker?&rdquo; <em>The Atlantic.</em></a>
+                        <a href="https://www.theatlantic.com/technology/2026/02/words-without-consequence/685974/" target="_blank" rel="noopener noreferrer" className="text-cosmos-glow/60 hover:text-cosmos-glow underline underline-offset-2 transition-colors">Roy, D. (2026). &ldquo;Words Without Consequence.&rdquo; <em>The Atlantic.</em></a>
                       </p>
                     </div>
                   </div>
@@ -355,7 +355,7 @@ export default function GoalInput() {
                 <button
                   onClick={() => fileInputRef.current?.click()}
                   className="p-2 text-cosmos-muted/40 hover:text-cosmos-glow transition-colors rounded-lg hover:bg-cosmos-glow/10"
-                  title="Attach files for context (documents, notes, inspiration)"
+                  title="Add any attachments for context"
                 >
                   <Paperclip className="w-4 h-4" />
                 </button>
@@ -366,7 +366,7 @@ export default function GoalInput() {
                       ? "text-cosmos-conflict bg-cosmos-conflict/15 animate-pulse"
                       : "text-cosmos-muted/40 hover:text-cosmos-glow hover:bg-cosmos-glow/10"
                   }`}
-                  title={isRecording ? "Stop recording" : "Describe your goal by voice"}
+                  title={isRecording ? "Stop recording" : "Speak your idea"}
                 >
                   {isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
                 </button>
