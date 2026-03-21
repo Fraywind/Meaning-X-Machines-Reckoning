@@ -170,7 +170,7 @@ export default function GoalInput() {
   }, [text, attachments, setGoalText, setHasStarted, setIsDecomposing, addNodes, addValues, setCritique]);
 
   const examples = [
-    { text: "I want to build an educational game online", icon: Gamepad2 },
+    { text: "Build and launch an educational product for kids", icon: Gamepad2 },
     { text: "How should a public university restructure its tuition model?", icon: GraduationCap },
     { text: "Should I sell my house and relocate?", icon: Home },
   ];
