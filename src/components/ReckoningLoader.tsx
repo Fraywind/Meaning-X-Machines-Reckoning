@@ -207,7 +207,7 @@ export default function ReckoningLoader() {
                 </motion.span>
               )}
             </span>
-            <span>Typically takes 10-20s</span>
+            <span>Typically takes about a minute</span>
           </div>
         </div>
 
