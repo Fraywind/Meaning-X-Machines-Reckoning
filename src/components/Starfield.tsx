@@ -13,6 +13,18 @@ interface Star {
   speed: number;
   twinkleSpeed: number;
   twinklePhase: number;
+  driftAngle: number;
+  color: [number, number, number];
+}
+
+interface ShootingStar {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  life: number;
+  maxLife: number;
+  size: number;
   color: [number, number, number];
 }
 
@@ -35,7 +47,9 @@ export default function Starfield() {
 
     let animationId: number;
     let stars: Star[] = [];
+    let shootingStars: ShootingStar[] = [];
     let time = 0;
+    const isStarfield = theme === "starfield";
 
     function resize() {
       canvas!.width = window.innerWidth;
@@ -58,13 +72,20 @@ export default function Starfield() {
           size: isCybernetics
             ? Math.random() * 1.5 + 0.2
             : isCute
-              ? Math.random() * 3.5 + 1 // bigger, bubbly particles
-              : Math.random() * 2 + 0.3,
+              ? Math.random() * 3.5 + 1
+              : isStarfield
+                ? Math.random() * 2.5 + 0.3
+                : Math.random() * 2 + 0.3,
           baseOpacity,
           opacity: baseOpacity,
-          speed: Math.random() * 0.2 + 0.02,
-          twinkleSpeed: Math.random() * 0.03 + 0.005,
+          speed: isStarfield
+            ? Math.random() * 0.4 + 0.08
+            : Math.random() * 0.2 + 0.02,
+          twinkleSpeed: isStarfield
+            ? Math.random() * 0.05 + 0.01
+            : Math.random() * 0.03 + 0.005,
           twinklePhase: Math.random() * Math.PI * 2,
+          driftAngle: Math.random() * Math.PI * 2,
           color: colors[Math.floor(Math.random() * colors.length)],
         });
       }
@@ -121,18 +142,83 @@ export default function Starfield() {
           // Gentle float upward with wobbly sine drift
           star.y -= star.speed * 0.04 * themeSpeed;
           star.x += Math.sin(time * 0.002 + star.twinklePhase) * 0.15;
+        } else if (isStarfield) {
+          // Lively drift: each star floats in its own direction with gentle wandering
+          const driftX = Math.cos(star.driftAngle) * star.speed * 0.3 * themeSpeed;
+          const driftY = Math.sin(star.driftAngle) * star.speed * 0.3 * themeSpeed;
+          // Add a slow sine weave on top
+          star.x += driftX + Math.sin(time * 0.003 + star.twinklePhase) * 0.12;
+          star.y += driftY + Math.cos(time * 0.002 + star.twinklePhase * 1.3) * 0.08;
+          // Slowly rotate drift angle for organic wandering
+          star.driftAngle += (Math.sin(time * 0.0005 + star.twinklePhase) * 0.002);
         } else {
-          // Default: slow drift
+          // Light/default: slow drift
           star.y += star.speed * 0.08 * themeSpeed;
           star.x += Math.sin(time * 0.001 + star.twinklePhase) * 0.02;
         }
 
+        // Wrap around edges
+        if (star.x > canvas!.width + 5) star.x = -5;
+        if (star.x < -5) star.x = canvas!.width + 5;
         if (star.y > canvas!.height + 5) {
           star.y = -5;
-          star.x = Math.random() * canvas!.width;
-        } else if (isCute && star.y < -5) {
+          if (!isStarfield) star.x = Math.random() * canvas!.width;
+        }
+        if (star.y < -5) {
           star.y = canvas!.height + 5;
-          star.x = Math.random() * canvas!.width;
+          if (!isStarfield) star.x = Math.random() * canvas!.width;
+        }
+      }
+
+      // Starfield: shooting stars
+      if (isStarfield) {
+        // Spawn occasionally
+        if (Math.random() < 0.008) {
+          const angle = Math.PI * 0.15 + Math.random() * Math.PI * 0.2; // mostly diagonal
+          const spd = 4 + Math.random() * 6;
+          shootingStars.push({
+            x: Math.random() * canvas!.width * 0.8,
+            y: Math.random() * canvas!.height * 0.3,
+            vx: Math.cos(angle) * spd,
+            vy: Math.sin(angle) * spd,
+            life: 0,
+            maxLife: 30 + Math.random() * 30,
+            size: 1.5 + Math.random() * 1.5,
+            color: colors[Math.floor(Math.random() * colors.length)],
+          });
+        }
+
+        // Draw and update shooting stars
+        for (let i = shootingStars.length - 1; i >= 0; i--) {
+          const ss = shootingStars[i];
+          ss.life++;
+          ss.x += ss.vx;
+          ss.y += ss.vy;
+
+          const progress = ss.life / ss.maxLife;
+          const alpha = progress < 0.3 ? progress / 0.3 : 1 - (progress - 0.3) / 0.7;
+          const [sr, sg, sb] = ss.color;
+
+          // Trail
+          const tailLen = 6;
+          for (let t = 0; t < tailLen; t++) {
+            const tAlpha = alpha * (1 - t / tailLen) * 0.5;
+            ctx!.beginPath();
+            ctx!.arc(ss.x - ss.vx * t * 0.4, ss.y - ss.vy * t * 0.4, ss.size * (1 - t / tailLen * 0.5), 0, Math.PI * 2);
+            ctx!.fillStyle = `rgba(${sr}, ${sg}, ${sb}, ${tAlpha})`;
+            ctx!.fill();
+          }
+
+          // Head glow
+          const grd = ctx!.createRadialGradient(ss.x, ss.y, 0, ss.x, ss.y, ss.size * 4);
+          grd.addColorStop(0, `rgba(${sr}, ${sg}, ${sb}, ${alpha * 0.6})`);
+          grd.addColorStop(1, `rgba(${sr}, ${sg}, ${sb}, 0)`);
+          ctx!.beginPath();
+          ctx!.arc(ss.x, ss.y, ss.size * 4, 0, Math.PI * 2);
+          ctx!.fillStyle = grd;
+          ctx!.fill();
+
+          if (ss.life >= ss.maxLife) shootingStars.splice(i, 1);
         }
       }
 
