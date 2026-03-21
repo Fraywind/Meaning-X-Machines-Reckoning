@@ -31,6 +31,7 @@ export default function Starfield() {
     const { colors, density, speed: themeSpeed, glowIntensity } = themeConfig.starfield;
     const isCybernetics = theme === "cybernetics";
     const isLight = theme === "light";
+    const isCute = theme === "cute";
 
     let animationId: number;
     let stars: Star[] = [];
@@ -48,13 +49,17 @@ export default function Starfield() {
       for (let i = 0; i < count; i++) {
         const baseOpacity = isLight
           ? Math.random() * 0.3 + 0.05
-          : Math.random() * 0.6 + 0.1;
+          : isCute
+            ? Math.random() * 0.4 + 0.2
+            : Math.random() * 0.6 + 0.1;
         stars.push({
           x: Math.random() * canvas!.width,
           y: Math.random() * canvas!.height,
           size: isCybernetics
-            ? Math.random() * 1.5 + 0.2 // smaller, sharper for cyber
-            : Math.random() * 2 + 0.3,
+            ? Math.random() * 1.5 + 0.2
+            : isCute
+              ? Math.random() * 3.5 + 1 // bigger, bubbly particles
+              : Math.random() * 2 + 0.3,
           baseOpacity,
           opacity: baseOpacity,
           speed: Math.random() * 0.2 + 0.02,
@@ -112,6 +117,10 @@ export default function Starfield() {
           // Data rain: mostly downward, slight horizontal jitter
           star.y += star.speed * 0.08 * themeSpeed * 3;
           star.x += (Math.random() - 0.5) * 0.1;
+        } else if (isCute) {
+          // Gentle float upward with wobbly sine drift
+          star.y -= star.speed * 0.04 * themeSpeed;
+          star.x += Math.sin(time * 0.002 + star.twinklePhase) * 0.15;
         } else {
           // Default: slow drift
           star.y += star.speed * 0.08 * themeSpeed;
@@ -120,6 +129,9 @@ export default function Starfield() {
 
         if (star.y > canvas!.height + 5) {
           star.y = -5;
+          star.x = Math.random() * canvas!.width;
+        } else if (isCute && star.y < -5) {
+          star.y = canvas!.height + 5;
           star.x = Math.random() * canvas!.width;
         }
       }

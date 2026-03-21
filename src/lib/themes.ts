@@ -1,4 +1,4 @@
-export type ThemeId = "starfield" | "cybernetics" | "light";
+export type ThemeId = "starfield" | "cybernetics" | "light" | "cute";
 
 export interface ThemeConfig {
   id: ThemeId;
@@ -128,6 +128,37 @@ export const themes: Record<ThemeId, ThemeConfig> = {
     },
     edgeDim: "#c8cdd4",
     scrollbarHover: "#d0d5dc",
+  },
+  cute: {
+    id: "cute",
+    name: "Candy",
+    description: "Soft pastels and bubbly vibes",
+    colors: {
+      bg: "#fff0f5",
+      surface: "#fff8fa",
+      border: "#f5c6d8",
+      muted: "#b07a8f",
+      text: "#5c2340",
+      glow: "#f472b6",
+      judgment: "#f59e0b",
+      conflict: "#fb7185",
+      resolved: "#34d399",
+      reckoning: "#c084fc",
+    },
+    starfield: {
+      colors: [
+        [244, 114, 182], // pink
+        [192, 132, 252], // purple
+        [251, 113, 133], // rose
+        [253, 186, 116], // peach
+        [196, 181, 253], // lavender
+      ],
+      density: 4000,
+      speed: 0.6,
+      glowIntensity: 0.35,
+    },
+    edgeDim: "#f0c0d4",
+    scrollbarHover: "#f5d0e0",
   },
 };
 

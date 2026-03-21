@@ -67,7 +67,7 @@ const THEME_KEY = "reckoning-theme";
 function readTheme(): ThemeId {
   try {
     const raw = localStorage.getItem(THEME_KEY);
-    if (raw === "starfield" || raw === "cybernetics" || raw === "light") return raw;
+    if (raw === "starfield" || raw === "cybernetics" || raw === "light" || raw === "cute") return raw;
     return "starfield";
   } catch {
     return "starfield";

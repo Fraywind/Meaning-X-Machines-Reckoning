@@ -19,7 +19,7 @@ export default function Home() {
   useEffect(() => {
     try {
       const stored = localStorage.getItem("reckoning-theme");
-      if (stored === "starfield" || stored === "cybernetics" || stored === "light") {
+      if (stored === "starfield" || stored === "cybernetics" || stored === "light" || stored === "cute") {
         useStore.getState().setTheme(stored);
       }
     } catch {}

@@ -147,6 +147,27 @@ body {
   box-shadow: 0 0 30px rgb(var(--glow) / 0.2), 0 0 60px rgb(var(--glow) / 0.05);
 }
 
+/* Candy theme: warm bubbly glows */
+[data-theme="cute"] .glow-judgment {
+  box-shadow: 0 0 16px rgb(var(--judgment) / 0.3), 0 0 32px rgb(var(--judgment) / 0.1);
+}
+
+[data-theme="cute"] .glow-conflict {
+  box-shadow: 0 0 16px rgb(var(--conflict) / 0.3), 0 0 32px rgb(var(--conflict) / 0.1);
+}
+
+[data-theme="cute"] .glow-reckoning {
+  box-shadow: 0 0 14px rgb(var(--reckoning) / 0.25);
+}
+
+[data-theme="cute"] .glow-resolved {
+  box-shadow: 0 0 14px rgb(var(--resolved) / 0.25);
+}
+
+[data-theme="cute"] .glow-input {
+  box-shadow: 0 0 24px rgb(var(--glow) / 0.2), 0 0 48px rgb(var(--glow) / 0.06);
+}
+
 /* Loading progress bar animation */
 @keyframes loading-shimmer {
   0% { background-position: -200% 0; }

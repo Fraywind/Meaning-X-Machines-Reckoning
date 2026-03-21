@@ -6,12 +6,13 @@ import { Palette } from "lucide-react";
 import { useStore } from "@/store/useStore";
 import { themes, ThemeId, applyTheme, getTheme } from "@/lib/themes";
 
-const themeList: ThemeId[] = ["starfield", "cybernetics", "light"];
+const themeList: ThemeId[] = ["starfield", "cybernetics", "light", "cute"];
 
 const themeIcons: Record<ThemeId, string> = {
   starfield: "\u2728",   // sparkles
   cybernetics: "\u2699",  // gear
   light: "\u2600",        // sun
+  cute: "\uD83C\uDF6C",  // candy
 };
 
 export default function ThemeSwitcher() {
