@@ -8,18 +8,22 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ["Inter", "system-ui", "sans-serif"],
+        display: ["Space Grotesk", "system-ui", "sans-serif"],
+      },
       colors: {
         cosmos: {
-          bg: "#0a0a0f",
-          surface: "#12121a",
-          border: "#1e1e2e",
-          muted: "#6b7280",
-          text: "#e2e8f0",
-          glow: "#818cf8",
-          judgment: "#f59e0b",
-          conflict: "#ef4444",
-          resolved: "#10b981",
-          reckoning: "#6366f1",
+          bg: "var(--bg)",
+          surface: "var(--surface)",
+          border: "var(--border)",
+          muted: "var(--muted)",
+          text: "var(--text)",
+          glow: "var(--glow)",
+          judgment: "var(--judgment)",
+          conflict: "var(--conflict)",
+          resolved: "var(--resolved)",
+          reckoning: "var(--reckoning)",
         },
       },
       animation: {
@@ -28,8 +32,8 @@ const config: Config = {
       },
       keyframes: {
         "pulse-glow": {
-          "0%, 100%": { boxShadow: "0 0 15px rgba(129,140,248,0.3)" },
-          "50%": { boxShadow: "0 0 30px rgba(129,140,248,0.6)" },
+          "0%, 100%": { boxShadow: "0 0 15px color-mix(in srgb, var(--glow) 30%, transparent)" },
+          "50%": { boxShadow: "0 0 30px color-mix(in srgb, var(--glow) 60%, transparent)" },
         },
         "node-bloom": {
           "0%": { transform: "scale(0)", opacity: "0" },

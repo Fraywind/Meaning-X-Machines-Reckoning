@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { buildCounterfactualPrompt } from "@/lib/prompts";
+import { safeParseJson } from "@/lib/jsonRepair";
 
 const anthropic = new Anthropic();
 
@@ -18,18 +19,13 @@ export async function POST(req: NextRequest) {
 
     const message = await anthropic.messages.create({
       model: "claude-sonnet-4-20250514",
-      max_tokens: 4096,
+      max_tokens: 8192,
       messages: [{ role: "user", content: prompt }],
     });
 
     const text = message.content[0].type === "text" ? message.content[0].text : "";
 
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      return NextResponse.json({ error: "Failed to parse AI response" }, { status: 500 });
-    }
-
-    const parsed = JSON.parse(jsonMatch[0]);
+    const parsed = safeParseJson(text);
     return NextResponse.json(parsed);
   } catch (error) {
     console.error("Counterfactual error:", error);

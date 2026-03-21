@@ -18,6 +18,8 @@ export interface DecisionNode {
   // Counterfactual
   isCounterfactual?: boolean;
   originalNodeId?: string;
+  // Layout
+  depth?: number;
   // Status
   status: "pending" | "active" | "resolved" | "conflict";
 }
@@ -37,6 +39,8 @@ export interface UserValue {
   strength: number; // 0-1 how strongly expressed
   sourceNodeIds: string[]; // which decisions revealed this value
   contradictions?: string[];
+  reasoning?: string; // why this value is scored at this strength
+  tradeoffImpacts?: string[]; // how specific tradeoffs affected the score
 }
 
 export interface DecompositionResponse {

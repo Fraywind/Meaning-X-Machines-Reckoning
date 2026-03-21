@@ -19,6 +19,12 @@ import JudgmentPanel from "./JudgmentPanel";
 import ValuePanel from "./ValuePanel";
 import CritiqueBar from "./CritiqueBar";
 import CounterfactualPanel from "./CounterfactualPanel";
+import SessionPanel from "./SessionPanel";
+import NodeDetailPanel from "./NodeDetailPanel";
+import ReckoningLoader from "./ReckoningLoader";
+import ReckoningSummary from "./ReckoningSummary";
+import ThemeSwitcher from "./ThemeSwitcher";
+import Starfield from "./Starfield";
 import { DecisionNode } from "@/types";
 
 const nodeTypes: NodeTypes = {
@@ -49,12 +55,14 @@ function layoutTree(nodes: Record<string, DecisionNode>): {
 
   // BFS layout
   const positions: Record<string, { x: number; y: number }> = {};
-  const HORIZONTAL_SPACING = 320;
-  const VERTICAL_SPACING = 160;
+  const depths: Record<string, number> = {};
+  const HORIZONTAL_SPACING = 360;
+  const VERTICAL_SPACING = 220;
 
   let currentY = 0;
 
   function layoutSubtree(nodeId: string, depth: number, yOffset: number): number {
+    depths[nodeId] = depth;
     const children = childrenMap[nodeId] || [];
     if (children.length === 0) {
       positions[nodeId] = { x: depth * HORIZONTAL_SPACING, y: yOffset };
@@ -80,14 +88,15 @@ function layoutTree(nodes: Record<string, DecisionNode>): {
     currentY = layoutSubtree(root.id, 0, currentY);
   }
 
-  // Create flow nodes and edges
+  // Create flow nodes and edges with depth info
   for (const n of nodeList) {
     const pos = positions[n.id] || { x: 0, y: flowNodes.length * VERTICAL_SPACING };
+    const depth = depths[n.id] ?? 0;
     flowNodes.push({
       id: n.id,
       type: "treeNode",
       position: pos,
-      data: n,
+      data: { ...n, depth },
     });
 
     if (n.parentId && nodes[n.parentId]) {
@@ -115,7 +124,7 @@ function layoutTree(nodes: Record<string, DecisionNode>): {
 }
 
 export default function DecisionTreeView() {
-  const { nodes, activeJudgmentId, counterfactualNodeId, showValuePanel, critique, isDecomposing } =
+  const { nodes, activeJudgmentId, counterfactualNodeId, inspectedNodeId, showValuePanel, showSessionPanel, critique, isDecomposing } =
     useStore();
 
   const { flowNodes, flowEdges } = useMemo(() => layoutTree(nodes), [nodes]);
@@ -130,18 +139,17 @@ export default function DecisionTreeView() {
 
   const activeJudgmentNode = activeJudgmentId ? nodes[activeJudgmentId] : null;
   const counterfactualNode = counterfactualNodeId ? nodes[counterfactualNodeId] : null;
+  const inspectedNode = inspectedNodeId ? nodes[inspectedNodeId] : null;
 
   return (
     <div className="w-full h-screen relative">
+      <Starfield />
+
       {/* Loading overlay */}
-      {isDecomposing && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2 bg-cosmos-surface/90 border border-cosmos-glow/30 rounded-lg backdrop-blur-sm">
-          <div className="flex items-center gap-3">
-            <div className="w-2 h-2 bg-cosmos-glow rounded-full animate-pulse" />
-            <span className="text-cosmos-glow text-sm">AI is reckoning...</span>
-          </div>
-        </div>
-      )}
+      <ReckoningLoader />
+
+      {/* Reckoning Summary — shows when all judgments resolved */}
+      <ReckoningSummary />
 
       <ReactFlow
         nodes={flowNodes}
@@ -178,6 +186,9 @@ export default function DecisionTreeView() {
         />
       </ReactFlow>
 
+      {/* Node Detail Panel — shows for any clicked node unless judgment/counterfactual is open */}
+      {inspectedNode && !activeJudgmentNode && <NodeDetailPanel node={inspectedNode} />}
+
       {/* Judgment Panel */}
       {activeJudgmentNode && <JudgmentPanel node={activeJudgmentNode} />}
 
@@ -187,11 +198,34 @@ export default function DecisionTreeView() {
       {/* Value Panel */}
       {showValuePanel && <ValuePanel />}
 
+      {/* Session Panel */}
+      {showSessionPanel && <SessionPanel />}
+
       {/* Critique Bar */}
       {critique && <CritiqueBar />}
 
       {/* Top bar */}
       <div className="absolute top-4 right-4 z-40 flex gap-2">
+        <ThemeSwitcher />
+        <button
+          onClick={() => useStore.getState().saveCurrentSession()}
+          className="px-3 py-1.5 text-xs rounded-lg border bg-cosmos-surface border-cosmos-border text-cosmos-muted hover:border-cosmos-resolved/30 hover:text-cosmos-resolved transition-all"
+        >
+          Save
+        </button>
+        <button
+          onClick={() => {
+            useStore.getState().loadSessionsFromStorage();
+            useStore.getState().toggleSessionPanel();
+          }}
+          className={`px-3 py-1.5 text-xs rounded-lg border transition-all ${
+            showSessionPanel
+              ? "bg-cosmos-glow/20 border-cosmos-glow/50 text-cosmos-glow"
+              : "bg-cosmos-surface border-cosmos-border text-cosmos-muted hover:border-cosmos-glow/30"
+          }`}
+        >
+          Sessions
+        </button>
         <button
           onClick={() => useStore.getState().toggleValuePanel()}
           className={`px-3 py-1.5 text-xs rounded-lg border transition-all ${

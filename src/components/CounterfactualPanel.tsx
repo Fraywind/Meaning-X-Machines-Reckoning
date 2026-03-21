@@ -4,6 +4,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { DecisionNode } from "@/types";
 import { useStore } from "@/store/useStore";
+import { safeFetch } from "@/lib/api";
 
 interface Props {
   node: DecisionNode;
@@ -21,18 +22,13 @@ export default function CounterfactualPanel({ node }: Props) {
   const handleExplore = async (alternateOption: string) => {
     setIsLoading(true);
     try {
-      const res = await fetch("/api/counterfactual", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          goal: goalText,
-          node,
-          chosenOption: chosenOption?.label || node.selectedOption,
-          alternateOption,
-          existingValues: values,
-        }),
+      const data = await safeFetch("/api/counterfactual", {
+        goal: goalText,
+        node,
+        chosenOption: chosenOption?.label || node.selectedOption,
+        alternateOption,
+        existingValues: values,
       });
-      const data = await res.json();
       if (data.alternateNodes) addNodes(data.alternateNodes);
       if (data.comparison) setComparison(data.comparison);
       if (data.insightsRevealed) setInsights(data.insightsRevealed);
