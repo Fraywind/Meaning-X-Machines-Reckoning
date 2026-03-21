@@ -28,6 +28,20 @@ interface ShootingStar {
   color: [number, number, number];
 }
 
+interface CuteFloater {
+  x: number;
+  y: number;
+  emoji: string;
+  size: number;
+  life: number;
+  maxLife: number;
+  wobblePhase: number;
+  wobbleSpeed: number;
+  floatSpeed: number;
+  rotation: number;
+  rotationSpeed: number;
+}
+
 export default function Starfield() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const theme = useStore((s) => s.theme);
@@ -48,8 +62,10 @@ export default function Starfield() {
     let animationId: number;
     let stars: Star[] = [];
     let shootingStars: ShootingStar[] = [];
+    let cuteFloaters: CuteFloater[] = [];
     let time = 0;
     const isStarfield = theme === "starfield";
+    const cuteEmojis = ["\uD83D\uDC3B", "\uD83D\uDC30", "\uD83C\uDF1F", "\uD83C\uDF38", "\uD83C\uDF6D", "\uD83E\uDDE1", "\uD83C\uDF80", "\uD83D\uDC31", "\uD83C\uDF3C", "\uD83E\uDD8B", "\u2B50", "\uD83C\uDF40", "\uD83D\uDC3E", "\uD83C\uDF37"];
 
     function resize() {
       canvas!.width = window.innerWidth;
@@ -227,6 +243,78 @@ export default function Starfield() {
         const scanY = (time * 1.5) % canvas!.height;
         ctx!.fillStyle = `rgba(0, 232, 123, 0.015)`;
         ctx!.fillRect(0, scanY, canvas!.width, 2);
+      }
+
+      // Cute theme: occasional plushie floaters
+      if (isCute) {
+        // Spawn very occasionally (~every 3-5 seconds at 60fps)
+        if (Math.random() < 0.004) {
+          const edge = Math.random();
+          let startX: number, startY: number;
+          if (edge < 0.5) {
+            // From bottom
+            startX = Math.random() * canvas!.width;
+            startY = canvas!.height + 20;
+          } else if (edge < 0.75) {
+            // From left
+            startX = -20;
+            startY = canvas!.height * 0.3 + Math.random() * canvas!.height * 0.5;
+          } else {
+            // From right
+            startX = canvas!.width + 20;
+            startY = canvas!.height * 0.3 + Math.random() * canvas!.height * 0.5;
+          }
+          cuteFloaters.push({
+            x: startX,
+            y: startY,
+            emoji: cuteEmojis[Math.floor(Math.random() * cuteEmojis.length)],
+            size: 16 + Math.random() * 14,
+            life: 0,
+            maxLife: 180 + Math.random() * 120,
+            wobblePhase: Math.random() * Math.PI * 2,
+            wobbleSpeed: 0.02 + Math.random() * 0.03,
+            floatSpeed: 0.3 + Math.random() * 0.4,
+            rotation: 0,
+            rotationSpeed: (Math.random() - 0.5) * 0.02,
+          });
+        }
+
+        for (let i = cuteFloaters.length - 1; i >= 0; i--) {
+          const f = cuteFloaters[i];
+          f.life++;
+
+          // Float upward
+          f.y -= f.floatSpeed;
+          // Gentle side-to-side wobble
+          f.x += Math.sin(f.life * f.wobbleSpeed + f.wobblePhase) * 0.8;
+          f.rotation += f.rotationSpeed;
+
+          // Fade in / hold / fade out
+          const progress = f.life / f.maxLife;
+          let alpha: number;
+          if (progress < 0.15) {
+            alpha = progress / 0.15;
+          } else if (progress > 0.7) {
+            alpha = 1 - (progress - 0.7) / 0.3;
+          } else {
+            alpha = 1;
+          }
+          // Keep it subtle
+          alpha *= 0.45;
+
+          ctx!.save();
+          ctx!.translate(f.x, f.y);
+          ctx!.rotate(f.rotation);
+          ctx!.globalAlpha = alpha;
+          ctx!.font = `${f.size}px serif`;
+          ctx!.textAlign = "center";
+          ctx!.textBaseline = "middle";
+          ctx!.fillText(f.emoji, 0, 0);
+          ctx!.restore();
+          ctx!.globalAlpha = 1;
+
+          if (f.life >= f.maxLife) cuteFloaters.splice(i, 1);
+        }
       }
 
       animationId = requestAnimationFrame(draw);
