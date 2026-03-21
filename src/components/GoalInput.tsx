@@ -209,9 +209,9 @@ export default function GoalInput() {
                       <p>
                         Reckoning is a thinking tool. You describe a complex goal, and the AI breaks it down
                         into a map of sub-decisions, trade-offs, and consequences you might not have seen coming.
-                        But here&apos;s the key part: <span className="text-cosmos-text">whenever a decision depends on
-                        your values or priorities, the AI stops and asks you.</span> It never makes those
-                        calls for you.
+                        But here&apos;s the key part: <span className="text-cosmos-text">whenever a decision hinges on
+                        human values or priorities, the AI stops and asks you.</span> It surfaces the tradeoff,
+                        but never makes the call for you.
                       </p>
                     </div>
 
@@ -226,7 +226,7 @@ export default function GoalInput() {
                         <li><span className="text-cosmos-judgment">Yellow nodes</span> are judgment points &mdash; click <span className="text-cosmos-text/80">&ldquo;Decide now&rdquo;</span> to weigh in</li>
                         <li>Choose an option, or clarify if none fit your situation</li>
                         <li>Your choices ripple forward, revealing new branches and sometimes new conflicts</li>
-                        <li>Open the <span className="text-cosmos-text/80">Values Mirror</span> to see what your decisions reveal about your priorities</li>
+                        <li>Open the <span className="text-cosmos-text/80">Values Mirror</span> to see what your decisions reveal about what matters to you</li>
                       </ol>
                     </div>
 
