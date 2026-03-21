@@ -294,7 +294,7 @@ export default function GoalInput() {
                         Why &ldquo;Reckoning&rdquo;?
                       </h3>
                       <p>
-                        This tool is built on an idea from computer scientist <span className="text-cosmos-text">Brian Cantwell Smith</span>:
+                        This tool is built on an idea from the late Professor <a href="https://ischool.utoronto.ca/news/obituary-brian-cantwell-smith-1950-to-2025/" target="_blank" rel="noopener noreferrer" className="text-cosmos-text underline underline-offset-2 hover:text-cosmos-glow transition-colors">Brian Cantwell Smith</a>:
                         AI is powerful at what he calls <em>reckoning</em> &mdash; breaking down problems, calculating outcomes,
                         tracing logic. But reckoning isn&apos;t the same as <em>judgment</em>. Judgment means deciding
                         what actually matters, what&apos;s ethical, what aligns with who you are. That&apos;s
