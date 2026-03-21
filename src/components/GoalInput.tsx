@@ -9,6 +9,8 @@ import {
   GraduationCap,
   Home,
   Paperclip,
+  Mic,
+  MicOff,
   ShieldAlert,
   X,
   Clock,
@@ -24,7 +26,62 @@ export default function GoalInput() {
   const [text, setText] = useState("");
   const [showAbout, setShowAbout] = useState(false);
   const [attachments, setAttachments] = useState<{ name: string; content: string }[]>([]);
+  const [isRecording, setIsRecording] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
+
+  const toggleRecording = useCallback(() => {
+    if (isRecording) {
+      recognitionRef.current?.stop();
+      setIsRecording(false);
+      return;
+    }
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Speech recognition is not supported in this browser. Try Chrome.");
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = "en-US";
+
+    let finalTranscript = "";
+
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
+      let interim = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalTranscript += transcript + " ";
+        } else {
+          interim = transcript;
+        }
+      }
+      setText((prev) => {
+        const base = prev.replace(/\u200B.*$/, "").trimEnd();
+        const spoken = (finalTranscript + interim).trim();
+        if (!spoken) return base;
+        return base ? `${base} ${spoken}` : spoken;
+      });
+    };
+
+    recognition.onerror = () => {
+      setIsRecording(false);
+    };
+
+    recognition.onend = () => {
+      setIsRecording(false);
+      // Clean up any interim marker
+      setText((prev) => prev.replace(/\u200B.*$/, "").trimEnd());
+    };
+
+    recognitionRef.current = recognition;
+    recognition.start();
+    setIsRecording(true);
+  }, [isRecording]);
   const {
     setGoalText, setHasStarted, setIsDecomposing, addNodes, addValues, setCritique,
     savedSessions, loadSessionsFromStorage, loadSession,
@@ -293,14 +350,27 @@ export default function GoalInput() {
                 autoFocus
               />
 
-              {/* Attach button */}
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="absolute top-4 right-4 p-2 text-cosmos-muted/40 hover:text-cosmos-glow transition-colors rounded-lg hover:bg-cosmos-glow/10"
-                title="Attach files for context (documents, notes, inspiration)"
-              >
-                <Paperclip className="w-4 h-4" />
-              </button>
+              {/* Attach & Mic buttons */}
+              <div className="absolute top-4 right-4 flex items-center gap-1">
+                <button
+                  onClick={toggleRecording}
+                  className={`p-2 rounded-lg transition-colors ${
+                    isRecording
+                      ? "text-cosmos-conflict bg-cosmos-conflict/15 animate-pulse"
+                      : "text-cosmos-muted/40 hover:text-cosmos-glow hover:bg-cosmos-glow/10"
+                  }`}
+                  title={isRecording ? "Stop recording" : "Describe your goal by voice"}
+                >
+                  {isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                </button>
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="p-2 text-cosmos-muted/40 hover:text-cosmos-glow transition-colors rounded-lg hover:bg-cosmos-glow/10"
+                  title="Attach files for context (documents, notes, inspiration)"
+                >
+                  <Paperclip className="w-4 h-4" />
+                </button>
+              </div>
               <input
                 ref={fileInputRef}
                 type="file"
