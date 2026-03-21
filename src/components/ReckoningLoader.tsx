@@ -2,121 +2,230 @@
 
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Brain, Network, AlertTriangle, Eye, Layers, Sparkles, Send, ChevronDown } from "lucide-react";
+import { Send, ChevronDown } from "lucide-react";
 import { useStore } from "@/store/useStore";
 
-const phases = [
-  { icon: Brain, label: "Analyzing goal structure..." },
-  { icon: Network, label: "Mapping decision pathways..." },
-  { icon: Layers, label: "Weighing trade-offs..." },
-  { icon: AlertTriangle, label: "Identifying value conflicts..." },
-  { icon: Eye, label: "Surfacing blind spots..." },
-  { icon: Sparkles, label: "Assembling your decision tree..." },
+// Rotating "thinking out loud" messages — cycle every ~2.5s
+const thinkingMessages = [
+  "Decomposing your goal into sub-decisions...",
+  "Identifying where your values come into play...",
+  "Mapping trade-offs between competing priorities...",
+  "Checking for blind spots you might not see...",
+  "Tracing downstream consequences of each path...",
+  "Finding where judgment calls are needed...",
+  "Weighing what's at stake at each fork...",
+  "Looking for hidden conflicts in your approach...",
+  "Separating facts from value-laden choices...",
+  "Building the branches of your decision tree...",
+  "Considering edge cases and second-order effects...",
+  "Detecting assumptions that need to be surfaced...",
 ];
 
-// Each phase advances after this many ms (cumulative pacing)
-const PHASE_INTERVAL = 2500;
+// Tips that rotate in the bottom section
+const tips = [
+  "Yellow nodes are judgment points — only you can decide those.",
+  "The Values Mirror shows what your choices reveal about your priorities.",
+  "You can click any node to inspect it or add context the AI missed.",
+  "After deciding, explore 'What if?' to see the road not taken.",
+  "The AI does the reckoning. You do the judging.",
+  "Blind spots are things you probably haven't considered yet.",
+];
 
 export default function ReckoningLoader() {
   const { isDecomposing, loadingNotes, setLoadingNotes } = useStore();
-  const [phaseIndex, setPhaseIndex] = useState(0);
+  const [messageIndex, setMessageIndex] = useState(0);
+  const [tipIndex, setTipIndex] = useState(0);
+  const [elapsed, setElapsed] = useState(0);
   const [showNotes, setShowNotes] = useState(false);
+  const [nodeCount, setNodeCount] = useState(0);
+  const startTime = useRef(Date.now());
   const noteRef = useRef<HTMLTextAreaElement>(null);
 
+  // Cycle thinking messages
   useEffect(() => {
     if (!isDecomposing) {
-      setPhaseIndex(0);
+      setMessageIndex(0);
+      setTipIndex(0);
+      setElapsed(0);
       setShowNotes(false);
+      setNodeCount(0);
       return;
     }
 
-    setPhaseIndex(0);
+    startTime.current = Date.now();
 
-    const interval = setInterval(() => {
-      setPhaseIndex((prev) => {
-        // Cycle through phases continuously so it never looks frozen
-        if (prev >= phases.length - 1) {
-          return phases.length - 3; // loop back a couple phases to keep movement
-        }
-        return prev + 1;
-      });
-    }, PHASE_INTERVAL);
+    // Rotate thinking messages every 2.5s
+    const msgInterval = setInterval(() => {
+      setMessageIndex((prev) => (prev + 1) % thinkingMessages.length);
+    }, 2500);
 
-    return () => clearInterval(interval);
+    // Rotate tips every 5s
+    const tipInterval = setInterval(() => {
+      setTipIndex((prev) => (prev + 1) % tips.length);
+    }, 5000);
+
+    // Update elapsed time every second
+    const timeInterval = setInterval(() => {
+      setElapsed(Math.floor((Date.now() - startTime.current) / 1000));
+    }, 1000);
+
+    // Simulate node discovery for visual feedback
+    const nodeInterval = setInterval(() => {
+      setNodeCount((prev) => prev + Math.floor(Math.random() * 2) + 1);
+    }, 1800);
+
+    return () => {
+      clearInterval(msgInterval);
+      clearInterval(tipInterval);
+      clearInterval(timeInterval);
+      clearInterval(nodeInterval);
+    };
   }, [isDecomposing]);
 
   if (!isDecomposing) return null;
 
-  const CurrentIcon = phases[phaseIndex].icon;
+  const formatTime = (s: number) => {
+    if (s < 60) return `${s}s`;
+    return `${Math.floor(s / 60)}m ${s % 60}s`;
+  };
 
   return (
-    <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 w-[360px]">
+    <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 w-[380px]">
       <motion.div
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         className="bg-cosmos-surface/95 backdrop-blur-md border border-cosmos-glow/30 rounded-xl overflow-hidden shadow-lg"
       >
-        {/* Phase indicator */}
+        {/* Main content */}
         <div className="px-4 pt-4 pb-3">
-          <div className="flex items-center gap-3 mb-3">
-            <motion.div
-              key={phaseIndex}
-              initial={{ scale: 0.5, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="w-8 h-8 rounded-lg bg-cosmos-glow/15 border border-cosmos-glow/30 flex items-center justify-center"
-            >
-              <CurrentIcon className="w-4 h-4 text-cosmos-glow" />
-            </motion.div>
-            <div className="flex-1 min-w-0">
-              <AnimatePresence mode="wait">
+          {/* Header with live timer */}
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              {/* Animated pulsing icon */}
+              <div className="relative w-8 h-8">
                 <motion.div
-                  key={phaseIndex}
-                  initial={{ y: 8, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  exit={{ y: -8, opacity: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="text-sm text-cosmos-glow font-medium"
-                >
-                  {phases[phaseIndex].label}
-                </motion.div>
-              </AnimatePresence>
-              <div className="text-[10px] text-cosmos-muted mt-0.5">
-                AI is reckoning — this takes a moment
+                  animate={{ scale: [1, 1.3, 1], opacity: [0.3, 0.6, 0.3] }}
+                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                  className="absolute inset-0 rounded-lg bg-cosmos-glow/20"
+                />
+                <div className="absolute inset-0 rounded-lg bg-cosmos-glow/10 border border-cosmos-glow/30 flex items-center justify-center">
+                  {/* Mini tree animation */}
+                  <svg width="16" height="16" viewBox="0 0 16 16" className="text-cosmos-glow">
+                    <motion.circle
+                      cx="8" cy="3" r="2"
+                      fill="currentColor"
+                      animate={{ opacity: [0.4, 1, 0.4] }}
+                      transition={{ duration: 1.5, repeat: Infinity }}
+                    />
+                    <motion.line
+                      x1="8" y1="5" x2="4" y2="10"
+                      stroke="currentColor" strokeWidth="1"
+                      animate={{ opacity: [0.2, 0.8, 0.2] }}
+                      transition={{ duration: 1.5, repeat: Infinity, delay: 0.3 }}
+                    />
+                    <motion.line
+                      x1="8" y1="5" x2="12" y2="10"
+                      stroke="currentColor" strokeWidth="1"
+                      animate={{ opacity: [0.2, 0.8, 0.2] }}
+                      transition={{ duration: 1.5, repeat: Infinity, delay: 0.6 }}
+                    />
+                    <motion.circle
+                      cx="4" cy="11" r="1.5"
+                      fill="currentColor"
+                      animate={{ opacity: [0.2, 0.9, 0.2] }}
+                      transition={{ duration: 1.5, repeat: Infinity, delay: 0.5 }}
+                    />
+                    <motion.circle
+                      cx="12" cy="11" r="1.5"
+                      fill="currentColor"
+                      animate={{ opacity: [0.2, 0.9, 0.2] }}
+                      transition={{ duration: 1.5, repeat: Infinity, delay: 0.8 }}
+                    />
+                  </svg>
+                </div>
               </div>
+              <div>
+                <div className="text-sm font-medium text-cosmos-text">AI is reckoning</div>
+                <div className="text-[10px] text-cosmos-muted">Building your decision tree</div>
+              </div>
+            </div>
+            {/* Live timer */}
+            <div className="flex items-center gap-1.5 px-2 py-1 bg-cosmos-glow/10 border border-cosmos-glow/20 rounded-md">
+              <motion.div
+                animate={{ opacity: [1, 0.3, 1] }}
+                transition={{ duration: 1, repeat: Infinity }}
+                className="w-1.5 h-1.5 rounded-full bg-cosmos-glow"
+              />
+              <span className="text-[11px] text-cosmos-glow font-mono tabular-nums">
+                {formatTime(elapsed)}
+              </span>
             </div>
           </div>
 
-          {/* Continuous progress bar — indeterminate shimmer */}
-          <div className="w-full h-1.5 bg-cosmos-border rounded-full overflow-hidden">
+          {/* Thinking message — rotates */}
+          <div className="mb-3 min-h-[20px]">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={messageIndex}
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -10 }}
+                transition={{ duration: 0.25 }}
+                className="text-xs text-cosmos-glow/80"
+              >
+                {thinkingMessages[messageIndex]}
+              </motion.div>
+            </AnimatePresence>
+          </div>
+
+          {/* Activity bar — continuous flowing animation */}
+          <div className="w-full h-1 bg-cosmos-border/50 rounded-full overflow-hidden mb-2">
             <motion.div
-              className="h-full rounded-full loading-shimmer"
+              className="h-full rounded-full bg-cosmos-glow"
               animate={{
-                width: ["20%", "70%", "40%", "85%", "55%", "90%"],
+                x: ["-100%", "200%"],
               }}
               transition={{
-                duration: 6,
+                duration: 1.5,
                 repeat: Infinity,
                 ease: "easeInOut",
               }}
+              style={{ width: "40%" }}
             />
           </div>
 
-          {/* Phase dots */}
-          <div className="flex justify-center gap-1.5 mt-2">
-            {phases.map((_, i) => (
-              <motion.div
-                key={i}
-                animate={{
-                  scale: i === phaseIndex ? 1.3 : 1,
-                  opacity: i === phaseIndex ? 1 : i <= phaseIndex ? 0.6 : 0.2,
-                }}
-                transition={{ duration: 0.3 }}
-                className={`w-1.5 h-1.5 rounded-full ${
-                  i <= phaseIndex ? "bg-cosmos-glow" : "bg-cosmos-border"
-                }`}
-              />
-            ))}
+          {/* Stats — shows activity */}
+          <div className="flex items-center justify-between text-[10px] text-cosmos-muted/60">
+            <span>
+              {nodeCount > 0 && (
+                <motion.span
+                  key={nodeCount}
+                  initial={{ opacity: 0.5 }}
+                  animate={{ opacity: 1 }}
+                >
+                  ~{Math.min(nodeCount, 12)} paths being explored
+                </motion.span>
+              )}
+            </span>
+            <span>Typically takes 10-20s</span>
           </div>
+        </div>
+
+        {/* Rotating tip */}
+        <div className="px-4 py-2.5 border-t border-cosmos-border/30 bg-cosmos-bg/30">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={tipIndex}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="text-[10px] text-cosmos-muted/50 leading-relaxed"
+            >
+              <span className="text-cosmos-glow/40 font-medium">Tip:</span>{" "}
+              {tips[tipIndex]}
+            </motion.div>
+          </AnimatePresence>
         </div>
 
         {/* "While you wait" notes section */}
