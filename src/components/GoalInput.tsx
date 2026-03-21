@@ -351,7 +351,14 @@ export default function GoalInput() {
               />
 
               {/* Attach & Mic buttons */}
-              <div className="absolute top-4 right-4 flex items-center gap-1">
+              <div className="absolute top-4 right-4 flex flex-col items-center gap-1">
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="p-2 text-cosmos-muted/40 hover:text-cosmos-glow transition-colors rounded-lg hover:bg-cosmos-glow/10"
+                  title="Attach files for context (documents, notes, inspiration)"
+                >
+                  <Paperclip className="w-4 h-4" />
+                </button>
                 <button
                   onClick={toggleRecording}
                   className={`p-2 rounded-lg transition-colors ${
@@ -362,13 +369,6 @@ export default function GoalInput() {
                   title={isRecording ? "Stop recording" : "Describe your goal by voice"}
                 >
                   {isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-                </button>
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="p-2 text-cosmos-muted/40 hover:text-cosmos-glow transition-colors rounded-lg hover:bg-cosmos-glow/10"
-                  title="Attach files for context (documents, notes, inspiration)"
-                >
-                  <Paperclip className="w-4 h-4" />
                 </button>
               </div>
               <input
