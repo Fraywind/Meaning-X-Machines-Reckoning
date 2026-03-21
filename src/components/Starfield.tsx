@@ -248,7 +248,7 @@ export default function Starfield() {
       // Cute theme: occasional plushie floaters
       if (isCute) {
         // Spawn very occasionally (~every 3-5 seconds at 60fps)
-        if (Math.random() < 0.004) {
+        if (Math.random() < 0.018) {
           const edge = Math.random();
           let startX: number, startY: number;
           if (edge < 0.5) {
