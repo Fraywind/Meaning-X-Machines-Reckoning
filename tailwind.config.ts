@@ -14,16 +14,16 @@ const config: Config = {
       },
       colors: {
         cosmos: {
-          bg: "var(--bg)",
-          surface: "var(--surface)",
-          border: "var(--border)",
-          muted: "var(--muted)",
-          text: "var(--text)",
-          glow: "var(--glow)",
-          judgment: "var(--judgment)",
-          conflict: "var(--conflict)",
-          resolved: "var(--resolved)",
-          reckoning: "var(--reckoning)",
+          bg: "rgb(var(--bg) / <alpha-value>)",
+          surface: "rgb(var(--surface) / <alpha-value>)",
+          border: "rgb(var(--border) / <alpha-value>)",
+          muted: "rgb(var(--muted) / <alpha-value>)",
+          text: "rgb(var(--text) / <alpha-value>)",
+          glow: "rgb(var(--glow) / <alpha-value>)",
+          judgment: "rgb(var(--judgment) / <alpha-value>)",
+          conflict: "rgb(var(--conflict) / <alpha-value>)",
+          resolved: "rgb(var(--resolved) / <alpha-value>)",
+          reckoning: "rgb(var(--reckoning) / <alpha-value>)",
         },
       },
       animation: {
@@ -32,8 +32,8 @@ const config: Config = {
       },
       keyframes: {
         "pulse-glow": {
-          "0%, 100%": { boxShadow: "0 0 15px color-mix(in srgb, var(--glow) 30%, transparent)" },
-          "50%": { boxShadow: "0 0 30px color-mix(in srgb, var(--glow) 60%, transparent)" },
+          "0%, 100%": { boxShadow: "0 0 15px rgb(var(--glow) / 0.3)" },
+          "50%": { boxShadow: "0 0 30px rgb(var(--glow) / 0.6)" },
         },
         "node-bloom": {
           "0%": { transform: "scale(0)", opacity: "0" },

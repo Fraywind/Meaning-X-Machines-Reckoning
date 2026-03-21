@@ -40,7 +40,7 @@ export default function ThemeSwitcher() {
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen(!open)}
-        className={`px-3 py-1.5 text-xs rounded-lg border transition-all ${
+        className={`px-3 py-1.5 text-xs rounded-lg border transition-all flex items-center gap-1.5 ${
           open
             ? "bg-cosmos-glow/20 border-cosmos-glow/50 text-cosmos-glow"
             : "bg-cosmos-surface border-cosmos-border text-cosmos-muted hover:border-cosmos-glow/30"
@@ -48,6 +48,7 @@ export default function ThemeSwitcher() {
         title="Switch theme"
       >
         <Palette className="w-3.5 h-3.5" />
+        <span>Themes</span>
       </button>
 
       <AnimatePresence>
@@ -57,7 +58,7 @@ export default function ThemeSwitcher() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.95 }}
             transition={{ duration: 0.15 }}
-            className="absolute right-0 top-full mt-2 w-52 bg-cosmos-surface border border-cosmos-border rounded-xl overflow-hidden shadow-lg z-[100]"
+            className="absolute right-0 top-full mt-2 w-64 bg-cosmos-surface border border-cosmos-border rounded-xl overflow-hidden shadow-lg z-[100]"
           >
             <div className="p-2 space-y-1">
               {themeList.map((id) => {
@@ -78,7 +79,7 @@ export default function ThemeSwitcher() {
                       <div className={`text-xs font-medium ${isActive ? "text-cosmos-glow" : "text-cosmos-text"}`}>
                         {t.name}
                       </div>
-                      <div className="text-[10px] text-cosmos-muted truncate">{t.description}</div>
+                      <div className="text-[10px] text-cosmos-muted">{t.description}</div>
                     </div>
                     {isActive && (
                       <div className="w-2 h-2 rounded-full bg-cosmos-glow shrink-0" />

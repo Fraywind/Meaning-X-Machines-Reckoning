@@ -18,13 +18,21 @@ export interface ThemeConfig {
   };
   starfield: {
     colors: [number, number, number][];
-    density: number; // pixels per star (lower = more dense)
+    density: number;
     speed: number;
     glowIntensity: number;
   };
-  // Extra CSS variables for fine-tuning
-  edgeDim: string; // edge color for non-special edges
+  edgeDim: string;
   scrollbarHover: string;
+}
+
+/** Convert hex to "r g b" for Tailwind alpha support */
+function hexToRgb(hex: string): string {
+  const h = hex.replace("#", "");
+  const r = parseInt(h.substring(0, 2), 16);
+  const g = parseInt(h.substring(2, 4), 16);
+  const b = parseInt(h.substring(4, 6), 16);
+  return `${r} ${g} ${b}`;
 }
 
 export const themes: Record<ThemeId, ThemeConfig> = {
@@ -46,11 +54,11 @@ export const themes: Record<ThemeId, ThemeConfig> = {
     },
     starfield: {
       colors: [
-        [129, 140, 248], // indigo
-        [167, 139, 250], // purple
-        [99, 102, 241],  // deeper indigo
-        [196, 181, 253], // light lavender
-        [224, 231, 255], // near-white blue
+        [129, 140, 248],
+        [167, 139, 250],
+        [99, 102, 241],
+        [196, 181, 253],
+        [224, 231, 255],
       ],
       density: 5000,
       speed: 1,
@@ -77,14 +85,14 @@ export const themes: Record<ThemeId, ThemeConfig> = {
     },
     starfield: {
       colors: [
-        [0, 232, 123],   // neon green
-        [0, 200, 255],   // cyan
-        [0, 255, 160],   // bright green
-        [100, 255, 200], // light teal
-        [0, 180, 120],   // medium green
+        [0, 232, 123],
+        [0, 200, 255],
+        [0, 255, 160],
+        [100, 255, 200],
+        [0, 180, 120],
       ],
-      density: 3000, // denser for "data rain" feel
-      speed: 2.5,    // faster falling
+      density: 3000,
+      speed: 2.5,
       glowIntensity: 0.5,
     },
     edgeDim: "#0f3f2a",
@@ -108,14 +116,14 @@ export const themes: Record<ThemeId, ThemeConfig> = {
     },
     starfield: {
       colors: [
-        [99, 102, 241],  // indigo
-        [139, 92, 246],  // purple
-        [168, 162, 255], // soft violet
-        [196, 181, 253], // lavender
-        [129, 140, 248], // light indigo
+        [99, 102, 241],
+        [139, 92, 246],
+        [168, 162, 255],
+        [196, 181, 253],
+        [129, 140, 248],
       ],
-      density: 8000, // sparser, more subtle
-      speed: 0.5,    // very slow, dreamy
+      density: 8000,
+      speed: 0.5,
       glowIntensity: 0.15,
     },
     edgeDim: "#c8cdd4",
@@ -127,24 +135,23 @@ export function getTheme(id: ThemeId): ThemeConfig {
   return themes[id] || themes.starfield;
 }
 
-/** Apply theme CSS variables to the document root */
+/** Apply theme CSS variables to the document root as space-separated RGB */
 export function applyTheme(theme: ThemeConfig) {
   const root = document.documentElement;
   const { colors } = theme;
 
-  root.style.setProperty("--bg", colors.bg);
-  root.style.setProperty("--surface", colors.surface);
-  root.style.setProperty("--border", colors.border);
-  root.style.setProperty("--muted", colors.muted);
-  root.style.setProperty("--text", colors.text);
-  root.style.setProperty("--glow", colors.glow);
-  root.style.setProperty("--judgment", colors.judgment);
-  root.style.setProperty("--conflict", colors.conflict);
-  root.style.setProperty("--resolved", colors.resolved);
-  root.style.setProperty("--reckoning", colors.reckoning);
+  root.style.setProperty("--bg", hexToRgb(colors.bg));
+  root.style.setProperty("--surface", hexToRgb(colors.surface));
+  root.style.setProperty("--border", hexToRgb(colors.border));
+  root.style.setProperty("--muted", hexToRgb(colors.muted));
+  root.style.setProperty("--text", hexToRgb(colors.text));
+  root.style.setProperty("--glow", hexToRgb(colors.glow));
+  root.style.setProperty("--judgment", hexToRgb(colors.judgment));
+  root.style.setProperty("--conflict", hexToRgb(colors.conflict));
+  root.style.setProperty("--resolved", hexToRgb(colors.resolved));
+  root.style.setProperty("--reckoning", hexToRgb(colors.reckoning));
   root.style.setProperty("--edge-dim", theme.edgeDim);
   root.style.setProperty("--scrollbar-hover", theme.scrollbarHover);
 
-  // Set a data attribute for conditional CSS
   root.setAttribute("data-theme", theme.id);
 }
