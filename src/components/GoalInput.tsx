@@ -209,6 +209,7 @@ export default function GoalInput() {
                       <p>
                         Reckoning is a thinking tool. You describe a complex goal, and the AI breaks it down
                         into a map of sub-decisions, trade-offs, and consequences you might not have seen coming.
+                        It helps you see tradeoffs clearly and inform your strategy before you commit.
                         But here&apos;s the key part: <span className="text-cosmos-text">whenever a decision hinges on
                         human values or priorities, the AI stops and asks you.</span> It surfaces the tradeoff,
                         but never makes the call for you.
@@ -251,13 +252,17 @@ export default function GoalInput() {
                       </p>
                     </div>
 
-                    <div className="text-[11px] text-cosmos-muted/40 pt-3 border-t border-cosmos-border/20 space-y-2">
+                    <div className="text-[11px] text-cosmos-muted/40 pt-3 border-t border-cosmos-border/20 space-y-1.5">
+                      <p className="text-cosmos-muted/50 text-[10px] uppercase tracking-wider">Inspired by</p>
                       <p>
-                        Based on: <a href="https://www.youtube.com/watch?v=8t5Jg7PthFI" target="_blank" rel="noopener noreferrer" className="text-cosmos-glow/60 hover:text-cosmos-glow underline underline-offset-2 transition-colors">Smith, B. C. (2020). <em>Reckoning and Judgement: The Promise of AI.</em></a>
-                        &nbsp;|&nbsp; Weizenbaum, J. (1976). <em>Computer Power and Human Reason.</em>
+                        <a href="https://www.youtube.com/watch?v=8t5Jg7PthFI" target="_blank" rel="noopener noreferrer" className="text-cosmos-glow/60 hover:text-cosmos-glow underline underline-offset-2 transition-colors">Smith, B. C. (2020). <em>Reckoning and Judgement: The Promise of AI.</em></a>
                       </p>
                       <p>
-                        Recommended reading: <a href="https://www.theatlantic.com/technology/2026/02/words-without-consequence/685974/" target="_blank" rel="noopener noreferrer" className="text-cosmos-glow/60 hover:text-cosmos-glow underline underline-offset-2 transition-colors">Roy, D. (2026). &ldquo;Words Without Consequence: What does it mean to have speech without a speaker?&rdquo; <em>The Atlantic.</em></a>
+                        Weizenbaum, J. (1976). <em>Computer Power and Human Reason.</em>
+                      </p>
+                      <p className="text-cosmos-muted/50 text-[10px] uppercase tracking-wider pt-2">Recommended read</p>
+                      <p>
+                        <a href="https://www.theatlantic.com/technology/2026/02/words-without-consequence/685974/" target="_blank" rel="noopener noreferrer" className="text-cosmos-glow/60 hover:text-cosmos-glow underline underline-offset-2 transition-colors">Roy, D. (2026). &ldquo;Words Without Consequence: What does it mean to have speech without a speaker?&rdquo; <em>The Atlantic.</em></a>
                       </p>
                     </div>
                   </div>
