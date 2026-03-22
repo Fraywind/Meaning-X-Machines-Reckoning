@@ -214,20 +214,25 @@ export default function GoalInput() {
             <div className="inline-flex items-center gap-3 mb-4">
               <div className="w-10 h-10 rounded-xl bg-cosmos-glow/10 border border-cosmos-glow/30 flex items-center justify-center">
                 <svg className="w-5 h-5 text-cosmos-glow" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  {/* Top node */}
-                  <circle cx="12" cy="4" r="2.5" />
-                  {/* Lines branching down */}
-                  <line x1="10.5" y1="6" x2="6" y2="10" />
-                  <line x1="13.5" y1="6" x2="18" y2="10" />
-                  {/* Mid-left node */}
-                  <circle cx="6" cy="12" r="2.5" />
-                  {/* Mid-right node */}
-                  <circle cx="18" cy="12" r="2.5" />
-                  {/* Lines cascading further */}
-                  <line x1="6" y1="14.5" x2="9" y2="18" />
-                  <line x1="18" y1="14.5" x2="15" y2="18" />
-                  {/* Bottom node (convergence) */}
-                  <circle cx="12" cy="20" r="2.5" />
+                  <style>{`
+                    @keyframes cascadeNode1 { 0%, 100% { opacity: 0.4; } 20%, 40% { opacity: 1; } }
+                    @keyframes cascadeNode2 { 0%, 20%, 100% { opacity: 0.3; } 40%, 60% { opacity: 1; } }
+                    @keyframes cascadeNode3 { 0%, 40%, 100% { opacity: 0.3; } 60%, 80% { opacity: 1; } }
+                    @keyframes cascadeLine { 0%, 100% { opacity: 0.2; } 30%, 50% { opacity: 0.7; } }
+                    .cn1 { animation: cascadeNode1 3s ease-in-out infinite; }
+                    .cn2 { animation: cascadeNode2 3s ease-in-out infinite; }
+                    .cn3 { animation: cascadeNode3 3s ease-in-out infinite; }
+                    .cl1 { animation: cascadeLine 3s ease-in-out infinite; animation-delay: 0.3s; }
+                    .cl2 { animation: cascadeLine 3s ease-in-out infinite; animation-delay: 0.9s; }
+                  `}</style>
+                  <circle cx="12" cy="4" r="2.5" className="cn1" />
+                  <line x1="10.5" y1="6" x2="6" y2="10" className="cl1" />
+                  <line x1="13.5" y1="6" x2="18" y2="10" className="cl1" />
+                  <circle cx="6" cy="12" r="2.5" className="cn2" />
+                  <circle cx="18" cy="12" r="2.5" className="cn2" />
+                  <line x1="6" y1="14.5" x2="9" y2="18" className="cl2" />
+                  <line x1="18" y1="14.5" x2="15" y2="18" className="cl2" />
+                  <circle cx="12" cy="20" r="2.5" className="cn3" />
                 </svg>
               </div>
               <h1 className="text-4xl font-display font-bold tracking-tight text-cosmos-text">
@@ -319,7 +324,9 @@ export default function GoalInput() {
                       </p>
                       <p className="mt-2">
                         Smith&apos;s argument was that AI will produce world-changing reckoning systems, but nothing
-                        in AI as currently conceived comes close to what genuine judgment requires.
+                        in AI as currently conceived comes close to what genuine judgment requires. AI doesn&apos;t have
+                        skin in the game. It has no stake in the outcome, no responsibility to the people affected,
+                        no consequences to live with. That&apos;s exactly why it can&apos;t replace human judgment.
                         <span className="text-cosmos-text"> Joseph Weizenbaum</span> arrived at a similar conclusion
                         in the 1970s: the moral dimension of a decision is not something you can hand off to a machine.
                         Cascade is built on that distinction. The AI does the reckoning. The judgment, with all its

@@ -25,6 +25,7 @@ import ReckoningLoader from "./ReckoningLoader";
 import ReckoningSummary from "./ReckoningSummary";
 import ThemeSwitcher from "./ThemeSwitcher";
 import Starfield from "./Starfield";
+import GuidePanel from "./GuidePanel";
 import { DecisionNode } from "@/types";
 
 const nodeTypes: NodeTypes = {
@@ -203,6 +204,9 @@ export default function DecisionTreeView() {
 
       {/* Critique Bar */}
       {critique && <CritiqueBar />}
+
+      {/* Guide Panel — bottom right */}
+      <GuidePanel />
 
       {/* Top bar */}
       <div className="absolute top-4 right-4 z-40 flex gap-2">
