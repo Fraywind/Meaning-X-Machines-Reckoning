@@ -196,7 +196,7 @@ export default function GoalInput() {
 
   const examples = [
     { text: "Build and launch an educational product for kids", icon: Gamepad2 },
-    { text: "How should a public university restructure its tuition model?", icon: GraduationCap },
+    { text: "How should a public university restructure its tuition model to make it affordable?", icon: GraduationCap },
     { text: "Should I sell my house and relocate?", icon: Home },
   ];
 
