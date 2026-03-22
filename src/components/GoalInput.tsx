@@ -3,7 +3,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Sparkles,
+  Workflow,
   ArrowRight,
   Gamepad2,
   GraduationCap,
@@ -214,7 +214,7 @@ export default function GoalInput() {
           >
             <div className="inline-flex items-center gap-3 mb-4">
               <div className="w-10 h-10 rounded-xl bg-cosmos-glow/10 border border-cosmos-glow/30 flex items-center justify-center">
-                <Sparkles className="w-5 h-5 text-cosmos-glow" />
+                <Workflow className="w-5 h-5 text-cosmos-glow" />
               </div>
               <h1 className="text-4xl font-display font-bold tracking-tight text-cosmos-text">
                 Cascade
@@ -295,16 +295,20 @@ export default function GoalInput() {
                         Reckoning vs. Judgment
                       </h3>
                       <p>
-                        The late Professor <a href="https://ischool.utoronto.ca/news/obituary-brian-cantwell-smith-1950-to-2025/" target="_blank" rel="noopener noreferrer" className="text-cosmos-text underline underline-offset-2 hover:text-cosmos-glow transition-colors">Brian Cantwell Smith</a> drew
-                        a line between two forms of intelligence. <em>Reckoning</em> &mdash; pattern recognition,
-                        decomposition, tracing logic, computing outcomes &mdash; is what machines do well.
-                        <em> Judgment</em> is something else entirely: deciding what matters, what&apos;s worth
-                        the cost, what sits right with who you actually are. One is computation. The other is conscience.
+                        The late Professor <a href="https://ischool.utoronto.ca/news/obituary-brian-cantwell-smith-1950-to-2025/" target="_blank" rel="noopener noreferrer" className="text-cosmos-text underline underline-offset-2 hover:text-cosmos-glow transition-colors">Brian Cantwell Smith</a> distinguished
+                        two kinds of intelligence. <em>Reckoning</em> is calculative rationality &mdash; pattern recognition,
+                        decomposition, logical inference, computing outcomes. It&apos;s what AI excels at, across both
+                        traditional and modern systems. <em>Judgment</em> is a fundamentally different capacity:
+                        dispassionate, deliberative thought grounded in ethical commitment and a sense of responsibility
+                        to the situation at hand. It&apos;s knowing not just what <em>can</em> be done,
+                        but what <em>should</em> be done &mdash; and being accountable for that call.
                       </p>
                       <p className="mt-2">
-                        <span className="text-cosmos-text">Joseph Weizenbaum</span> saw this coming in the 1970s &mdash;
-                        machines can compute, but the question of <em>what to value</em> isn&apos;t a computation.
-                        Cascade is built on that distinction. The AI handles the reckoning. The judgment stays with you.
+                        Smith argued that AI will build world-changing reckoning systems, but nothing in AI as
+                        currently conceived approaches what is required for genuine judgment. <span className="text-cosmos-text">Joseph
+                        Weizenbaum</span> warned of the same thing in the 1970s &mdash; that the moral dimension
+                        of decisions is not something you can offload to a machine. Cascade is built on that line.
+                        The AI handles the reckoning. The judgment &mdash; with all its moral weight &mdash; stays with you.
                       </p>
                     </div>
 
