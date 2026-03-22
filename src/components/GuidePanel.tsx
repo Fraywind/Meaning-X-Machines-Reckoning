@@ -55,18 +55,31 @@ export default function GuidePanel() {
 
   return (
     <>
-      {/* Small floating button */}
-      <button
+      {/* Floating guide button */}
+      <motion.button
         onClick={() => setOpen(!open)}
-        className={`fixed bottom-6 right-6 z-50 w-10 h-10 rounded-full flex items-center justify-center transition-all shadow-lg ${
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 2, duration: 0.5 }}
+        className={`fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-xl px-3.5 py-2.5 transition-all shadow-lg ${
           open
             ? "bg-cosmos-glow/20 border border-cosmos-glow/50 text-cosmos-glow"
             : "bg-cosmos-surface/90 border border-cosmos-border text-cosmos-muted hover:text-cosmos-glow hover:border-cosmos-glow/30"
         }`}
-        title="Guide & History"
       >
-        {open ? <X className="w-4 h-4" /> : <HelpCircle className="w-4 h-4" />}
-      </button>
+        {open ? (
+          <X className="w-4 h-4" />
+        ) : (
+          <>
+            <Lightbulb className="w-4 h-4" />
+            <span className="text-xs font-medium">
+              {pendingJudgments.length > 0
+                ? `${pendingJudgments.length} decision${pendingJudgments.length > 1 ? "s" : ""} waiting`
+                : "Guide"}
+            </span>
+          </>
+        )}
+      </motion.button>
 
       <AnimatePresence>
         {open && (
