@@ -265,11 +265,12 @@ export default function GoalInput() {
                       </h3>
                       <p>
                         Cascade is a thinking tool. You describe a complex goal, and the AI breaks it down
-                        into a map of sub-decisions, cascading consequences, and paths you might not have seen coming.
-                        It helps you simulate counterfactuals and explore possible outcomes before you commit.
-                        But here&apos;s the key part: <span className="text-cosmos-text">whenever a decision hinges on
-                        human values or priorities, the AI stops and asks you.</span> It surfaces the tradeoff,
-                        but never makes the call for you.
+                        into a map of sub-decisions, consequences, and paths you might not have seen coming.
+                        In any complex goal, there will inevitably be moments where a decision comes down to
+                        tradeoffs and preferences &mdash; choices that have a cascading effect on everything
+                        downstream. When the AI reaches one of those moments, <span className="text-cosmos-text">it
+                        detects it, surfaces the conflict and tradeoffs, and brings it to you.</span> You
+                        make the judgment call as the human. Your intent drives what happens next.
                       </p>
                     </div>
 
