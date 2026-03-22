@@ -26,6 +26,29 @@ export default function GoalInput() {
   const [showAbout, setShowAbout] = useState(false);
   const [attachments, setAttachments] = useState<{ name: string; content: string }[]>([]);
   const [isRecording, setIsRecording] = useState(false);
+  const [showValues, setShowValues] = useState(false);
+  const [statedValues, setStatedValues] = useState<string[]>([]);
+  const [customValue, setCustomValue] = useState("");
+
+  const suggestedValues = [
+    "Fairness", "Sustainability", "Cost efficiency", "Speed to market",
+    "User safety", "Inclusivity", "Privacy", "Innovation",
+    "Long-term viability", "Transparency", "Community impact", "Quality",
+  ];
+
+  const toggleValue = (v: string) => {
+    setStatedValues((prev) =>
+      prev.includes(v) ? prev.filter((x) => x !== v) : prev.length < 5 ? [...prev, v] : prev
+    );
+  };
+
+  const addCustomValue = () => {
+    const trimmed = customValue.trim();
+    if (trimmed && !statedValues.includes(trimmed) && statedValues.length < 5) {
+      setStatedValues((prev) => [...prev, trimmed]);
+      setCustomValue("");
+    }
+  };
   const fileInputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
 
@@ -114,8 +137,11 @@ export default function GoalInput() {
   const handleSubmit = useCallback(async () => {
     if (!text.trim()) return;
 
-    // Build the full goal with attachments context
+    // Build the full goal with values and attachments context
     let fullGoal = text;
+    if (statedValues.length > 0) {
+      fullGoal += `\n\n--- Values and priorities the user explicitly stated matter to them ---\n${statedValues.join(", ")}\nWhen critiquing decisions, reference these stated values. Distinguish between values the user stated upfront vs. values you infer from their choices.`;
+    }
     if (attachments.length > 0) {
       fullGoal +=
         "\n\n--- Attached reference materials ---\n" +
@@ -436,6 +462,84 @@ export default function GoalInput() {
                 ))}
               </div>
             )}
+
+            {/* Values section */}
+            <div className="mt-4">
+              <button
+                onClick={() => setShowValues(!showValues)}
+                className="flex items-center gap-2 text-xs text-cosmos-muted/60 hover:text-cosmos-glow transition-colors"
+              >
+                <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${showValues ? "rotate-180" : ""}`} />
+                <span>What matters to you?</span>
+                {statedValues.length > 0 && (
+                  <span className="text-cosmos-glow/60">({statedValues.length}/5)</span>
+                )}
+              </button>
+
+              <AnimatePresence>
+                {showValues && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="mt-3 p-4 bg-cosmos-surface/50 border border-cosmos-border/30 rounded-xl">
+                      <p className="text-[11px] text-cosmos-muted/60 mb-3">
+                        Optional: pick up to 5 values that matter most to you. The AI will reference these when surfacing tradeoffs and giving feedback.
+                      </p>
+                      <div className="flex flex-wrap gap-2 mb-3">
+                        {suggestedValues.map((v) => (
+                          <button
+                            key={v}
+                            onClick={() => toggleValue(v)}
+                            className={`px-2.5 py-1 text-[11px] rounded-lg border transition-all ${
+                              statedValues.includes(v)
+                                ? "bg-cosmos-glow/15 border-cosmos-glow/40 text-cosmos-glow"
+                                : "border-cosmos-border/40 text-cosmos-muted/50 hover:border-cosmos-glow/20 hover:text-cosmos-muted"
+                            }`}
+                          >
+                            {v}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="flex gap-2">
+                        <input
+                          value={customValue}
+                          onChange={(e) => setCustomValue(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustomValue(); } }}
+                          placeholder="Add your own..."
+                          className="flex-1 bg-cosmos-bg/50 border border-cosmos-border/30 rounded-lg px-3 py-1.5 text-xs text-cosmos-text placeholder:text-cosmos-muted/30 focus:outline-none focus:border-cosmos-glow/30"
+                        />
+                        <button
+                          onClick={addCustomValue}
+                          disabled={!customValue.trim() || statedValues.length >= 5}
+                          className="px-3 py-1.5 text-xs text-cosmos-glow/60 border border-cosmos-border/30 rounded-lg hover:bg-cosmos-glow/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                        >
+                          Add
+                        </button>
+                      </div>
+                      {statedValues.length > 0 && (
+                        <div className="mt-3 flex flex-wrap gap-1.5">
+                          {statedValues.map((v) => (
+                            <span
+                              key={v}
+                              className="flex items-center gap-1 px-2.5 py-1 text-[11px] bg-cosmos-glow/10 border border-cosmos-glow/25 rounded-full text-cosmos-glow"
+                            >
+                              {v}
+                              <button onClick={() => toggleValue(v)} className="hover:text-cosmos-conflict transition-colors">
+                                <X className="w-2.5 h-2.5" />
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
 
             {/* Example prompts */}
             <div className="mt-8 flex flex-wrap gap-3 justify-center">
