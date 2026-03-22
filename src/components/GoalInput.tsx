@@ -217,7 +217,7 @@ export default function GoalInput() {
                 <Sparkles className="w-5 h-5 text-cosmos-glow" />
               </div>
               <h1 className="text-4xl font-display font-bold tracking-tight text-cosmos-text">
-                Reckoning
+                Cascade
               </h1>
             </div>
             <p className="text-cosmos-muted text-sm max-w-md mx-auto leading-relaxed">
@@ -261,10 +261,10 @@ export default function GoalInput() {
                     {/* What it is */}
                     <div>
                       <h3 className="text-cosmos-text font-medium text-xs uppercase tracking-wider mb-1.5">
-                        What is Reckoning?
+                        What is Cascade?
                       </h3>
                       <p>
-                        Reckoning is a thinking tool. You describe a complex goal, and the AI breaks it down
+                        Cascade is a thinking tool. You describe a complex goal, and the AI breaks it down
                         into a map of sub-decisions, cascading consequences, and paths you might not have seen coming.
                         It helps you simulate counterfactuals and explore possible outcomes before you commit.
                         But here&apos;s the key part: <span className="text-cosmos-text">whenever a decision hinges on
@@ -291,21 +291,19 @@ export default function GoalInput() {
                     {/* Why judgment matters */}
                     <div className="pt-2 border-t border-cosmos-border/30">
                       <h3 className="text-cosmos-text font-medium text-xs uppercase tracking-wider mb-1.5">
-                        Why &ldquo;Reckoning&rdquo;?
+                        Reckoning vs. Judgment
                       </h3>
                       <p>
-                        This tool is built on an idea from the late Professor <a href="https://ischool.utoronto.ca/news/obituary-brian-cantwell-smith-1950-to-2025/" target="_blank" rel="noopener noreferrer" className="text-cosmos-text underline underline-offset-2 hover:text-cosmos-glow transition-colors">Brian Cantwell Smith</a>:
-                        AI is powerful at what he calls <em>reckoning</em> &mdash; breaking down problems, calculating outcomes,
-                        tracing logic. But reckoning isn&apos;t the same as <em>judgment</em>. Judgment means deciding
-                        what actually matters, what&apos;s ethical, what aligns with who you are. That&apos;s
-                        something only you can do.
+                        The late Professor <a href="https://ischool.utoronto.ca/news/obituary-brian-cantwell-smith-1950-to-2025/" target="_blank" rel="noopener noreferrer" className="text-cosmos-text underline underline-offset-2 hover:text-cosmos-glow transition-colors">Brian Cantwell Smith</a> drew
+                        a line between two forms of intelligence. <em>Reckoning</em> &mdash; pattern recognition,
+                        decomposition, tracing logic, computing outcomes &mdash; is what machines do well.
+                        <em> Judgment</em> is something else entirely: deciding what matters, what&apos;s worth
+                        the cost, what sits right with who you actually are. One is computation. The other is conscience.
                       </p>
                       <p className="mt-2">
-                        As early as the 1970s, <span className="text-cosmos-text">Joseph Weizenbaum</span> warned that we
-                        should never hand judgment over to machines &mdash; not because they can&apos;t compute, but because
-                        the question of <em>what to value</em> is fundamentally human. This tool takes that
-                        seriously: the AI does the reckoning, and you do the judging. Every consequential decision
-                        stays with you.
+                        <span className="text-cosmos-text">Joseph Weizenbaum</span> saw this coming in the 1970s &mdash;
+                        machines can compute, but the question of <em>what to value</em> isn&apos;t a computation.
+                        Cascade is built on that distinction. The AI handles the reckoning. The judgment stays with you.
                       </p>
                     </div>
 

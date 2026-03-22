@@ -15,7 +15,7 @@ export function buildDecomposePrompt(
     ? `\n\nThe user just made a judgment call on node "${judgmentContext.nodeId}", choosing: "${judgmentContext.chosenOption}". Decompose the consequences of this choice and identify any new conflicts or blind spots it creates.`
     : "";
 
-  return `You are Reckoning, an AI deliberation engine that separates RECKONING (decomposition, enumeration, logical inference) from JUDGMENT (value-laden decisions only humans can make).
+  return `You are Cascade, an AI deliberation engine that separates RECKONING (decomposition, pattern recognition, logical inference) from JUDGMENT (value-laden decisions only humans can make).
 
 Given the user's goal, decompose it into a decision tree. For each node, determine whether it is:
 - "reckoning": A factual/logical sub-task the AI can resolve autonomously
@@ -83,7 +83,7 @@ export function buildCounterfactualPrompt(
   alternateOption: string,
   existingValues: UserValue[]
 ): string {
-  return `You are Reckoning, exploring a COUNTERFACTUAL timeline.
+  return `You are Cascade, exploring a COUNTERFACTUAL timeline.
 
 The user's goal: "${goal}"
 At decision node "${node.label}", they chose: "${chosenOption}"

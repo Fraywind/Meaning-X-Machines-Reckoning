@@ -29,7 +29,7 @@ const iconMap: Record<string, typeof Target> = {
 
 const typeLabels: Record<string, string> = {
   goal: "Your Goal",
-  reckoning: "AI Reckoning",
+  reckoning: "AI Analysis",
   judgment: "Judgment Needed",
   resolved: "Resolved",
   counterfactual: "Alternate Path",

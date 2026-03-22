@@ -8,7 +8,7 @@ import "@fontsource/space-grotesk/700.css";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Reckoning — AI Deliberation Engine",
+  title: "Cascade — AI Deliberation Engine",
   description:
     "An AI Deliberation Engine for Human Judgment. Decomposes complex goals into decision trees, surfaces hidden conflicts, and returns control to the human at every inflection point.",
 };
