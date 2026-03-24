@@ -12,6 +12,7 @@ import {
   AlertCircle,
   ChevronRight,
   RotateCcw,
+  Loader2,
 } from "lucide-react";
 import { DecisionNode } from "@/types";
 import { useStore } from "@/store/useStore";
@@ -25,7 +26,9 @@ const iconMap = {
 };
 
 function TreeNode({ data }: NodeProps<DecisionNode>) {
-  const { setActiveJudgment, setCounterfactualNode, setInspectedNode, theme } = useStore();
+  const { setActiveJudgment, setCounterfactualNode, setInspectedNode, processingNodeIds, recentlyResolvedIds } = useStore();
+  const isProcessing = processingNodeIds.has(data.id);
+  const justResolved = recentlyResolvedIds.has(data.id);
 
   const depth = data.depth ?? 0;
   const Icon = iconMap[data.type] || CircleDot;
@@ -99,16 +102,6 @@ function TreeNode({ data }: NodeProps<DecisionNode>) {
             ? "text-cosmos-glow"
             : "text-cosmos-reckoning";
 
-  // Nature theme wood texture classes
-  const natureWoodClass =
-    theme === "nature"
-      ? data.type === "judgment"
-        ? "nature-wood-judgment"
-        : data.type === "resolved"
-          ? "nature-wood-resolved"
-          : "nature-wood"
-      : "";
-
   const bgClass = isPivot
     ? "bg-cosmos-surface"
     : "bg-cosmos-surface/80";
@@ -137,9 +130,10 @@ function TreeNode({ data }: NodeProps<DecisionNode>) {
       onClick={handleClick}
       className={`
         rounded-xl ${borderWidth} ${bgClass} backdrop-blur-sm
-        ${borderColor} ${glowClass} ${sizeClass} ${opacityClass} ${natureWoodClass}
+        ${borderColor} ${glowClass} ${sizeClass} ${opacityClass}
         cursor-pointer hover:brightness-110 transition-all
         ${data.type === "judgment" && data.status !== "resolved" ? "animate-pulse-glow" : ""}
+        ${justResolved ? "animate-resolve-burst" : ""}
       `}
     >
       <Handle type="target" position={Position.Left} className="!bg-cosmos-glow !w-2 !h-2" />
@@ -182,6 +176,13 @@ function TreeNode({ data }: NodeProps<DecisionNode>) {
             <div className={`mt-2 px-2 py-1 bg-cosmos-conflict/10 border border-cosmos-conflict/20 rounded-lg flex items-start gap-1.5 ${depth >= 3 ? "text-[10px]" : "text-xs"}`}>
               <AlertCircle className="w-3 h-3 text-cosmos-conflict/80 mt-0.5 shrink-0" />
               <span className="text-cosmos-conflict/80">{data.blindSpots[0]}</span>
+            </div>
+          )}
+
+          {isProcessing && (
+            <div className={`mt-2 flex items-center gap-1.5 text-cosmos-glow ${depth >= 3 ? "text-[10px]" : "text-xs"}`}>
+              <Loader2 className="w-3 h-3 animate-spin" />
+              <span>Expanding...</span>
             </div>
           )}
         </div>

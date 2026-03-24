@@ -10,12 +10,13 @@ import {
   AlertCircle,
   ChevronRight,
   Lightbulb,
+  Loader2,
 } from "lucide-react";
 import { useStore } from "@/store/useStore";
 
 export default function GuidePanel() {
   const [open, setOpen] = useState(false);
-  const { nodes, values, critique } = useStore();
+  const { nodes, values, critique, activeJudgmentId, inspectedNodeId, counterfactualNodeId, processingNodeIds } = useStore();
 
   const nodeList = useMemo(() => Object.values(nodes), [nodes]);
 
@@ -51,17 +52,40 @@ export default function GuidePanel() {
     return "Explore the tree by clicking on nodes. Yellow nodes need your judgment.";
   }, [pendingJudgments, resolvedJudgments, nodeList]);
 
-  if (nodeList.length < 2) return null;
+  // Hide when any right-side panel is open (judgment, detail, counterfactual)
+  const rightPanelOpen = !!activeJudgmentId || !!inspectedNodeId || !!counterfactualNodeId;
+
+  if (nodeList.length < 2 || rightPanelOpen) return null;
+
+  const expandingCount = processingNodeIds.size;
 
   return (
     <>
+      {/* Expanding indicator — to the left of the guide button */}
+      <AnimatePresence>
+        {expandingCount > 0 && !rightPanelOpen && nodeList.length >= 2 && (
+          <motion.div
+            initial={{ opacity: 0, x: 10 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 10 }}
+            transition={{ duration: 0.2 }}
+            className="fixed bottom-6 right-[400px] z-50 flex items-center gap-1.5 rounded-lg px-2.5 py-2 bg-cosmos-reckoning/10 border border-cosmos-reckoning/25 shadow-sm"
+          >
+            <Loader2 className="w-3 h-3 text-cosmos-reckoning animate-spin" />
+            <span className="text-[11px] text-cosmos-reckoning font-medium">
+              Expanding{expandingCount > 1 ? ` (${expandingCount})` : ""}...
+            </span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Floating guide button */}
       <motion.button
         onClick={() => setOpen(!open)}
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 2, duration: 0.5 }}
-        className={`fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-xl px-3.5 py-2.5 transition-all shadow-lg ${
+        className={`fixed bottom-6 right-[220px] z-50 flex items-center gap-2 rounded-xl px-3.5 py-2.5 transition-all shadow-lg ${
           open
             ? "bg-cosmos-glow/20 border border-cosmos-glow/50 text-cosmos-glow"
             : "bg-cosmos-surface/90 border border-cosmos-border text-cosmos-muted hover:text-cosmos-glow hover:border-cosmos-glow/30"
@@ -88,7 +112,7 @@ export default function GuidePanel() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className="fixed bottom-20 right-6 z-50 w-80 max-h-[70vh] bg-cosmos-surface/95 backdrop-blur-sm border border-cosmos-border rounded-xl shadow-xl overflow-hidden flex flex-col"
+            className="fixed bottom-20 right-[220px] z-50 w-80 max-h-[70vh] bg-cosmos-surface/95 backdrop-blur-sm border border-cosmos-border rounded-xl shadow-xl overflow-hidden flex flex-col"
           >
             {/* Header */}
             <div className="px-4 py-3 border-b border-cosmos-border/50">

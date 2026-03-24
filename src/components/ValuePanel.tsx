@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, TrendingUp, TrendingDown, Minus, Info } from "lucide-react";
+import { ChevronDown, TrendingUp, TrendingDown, Minus, Info, ArrowRight } from "lucide-react";
 import { useStore } from "@/store/useStore";
 import { UserValue } from "@/types";
 
@@ -58,7 +58,7 @@ function ValueCard({ value }: { value: UserValue }) {
           <Info className="w-3 h-3" />
           <span>
             Revealed by {value.sourceNodeIds.length} decision
-            {value.sourceNodeIds.length !== 1 ? "s" : ""}, tap for details
+            {value.sourceNodeIds.length !== 1 ? "s" : ""} &mdash; tap for details
           </span>
         </div>
       </button>
@@ -169,6 +169,85 @@ function ValueCard({ value }: { value: UserValue }) {
   );
 }
 
+function ValuesEvolution({ values }: { values: UserValue[] }) {
+  const nodes = useStore((s) => s.nodes);
+  const resolvedNodes = useMemo(
+    () => Object.values(nodes).filter((n) => n.type === "resolved"),
+    [nodes],
+  );
+
+  const insights = useMemo(() => {
+    if (values.length < 2 || resolvedNodes.length < 2) return null;
+
+    const sorted = [...values].sort((a, b) => b.strength - a.strength);
+    const top = sorted[0];
+    const emerging = sorted.find(
+      (v) => v.sourceNodeIds.length === 1 && v.strength >= 0.3,
+    );
+    const dominant = sorted.filter((v) => v.strength >= 0.7);
+    const contested = values.find(
+      (v) => v.contradictions && v.contradictions.length > 0,
+    );
+
+    const lines: { label: string; detail: string; color: string }[] = [];
+
+    if (dominant.length >= 2) {
+      // Show top 3 max, with count of remaining
+      const shown = dominant.slice(0, 3).map((v) => v.label);
+      const remaining = dominant.length - shown.length;
+      const listText = shown.join(", ") + (remaining > 0 ? ` (+${remaining} more)` : "");
+      lines.push({
+        label: "Consistent priorities",
+        detail: `${listText} — strong across your decisions.`,
+        color: "text-cosmos-resolved",
+      });
+    } else if (top) {
+      lines.push({
+        label: "Strongest signal",
+        detail: `${top.label} (${Math.round(top.strength * 100)}%)`,
+        color: "text-cosmos-glow",
+      });
+    }
+
+    if (emerging) {
+      lines.push({
+        label: "Emerging",
+        detail: `${emerging.label} — just surfaced, may grow or fade.`,
+        color: "text-cosmos-judgment",
+      });
+    }
+
+    if (contested) {
+      lines.push({
+        label: "Tension",
+        detail: `${contested.label} — in tension with other choices. You're navigating a real tradeoff.`,
+        color: "text-cosmos-conflict",
+      });
+    }
+
+    return lines.length > 0 ? lines : null;
+  }, [values, resolvedNodes]);
+
+  if (!insights) return null;
+
+  return (
+    <div className="mb-4 p-3 bg-cosmos-glow/5 border border-cosmos-glow/15 rounded-lg space-y-2.5">
+      <div className="text-[10px] text-cosmos-glow/70 uppercase tracking-wider font-medium">
+        How your values are evolving
+      </div>
+      {insights.map((insight, i) => (
+        <div key={i} className="flex items-start gap-2">
+          <ArrowRight className={`w-3 h-3 mt-0.5 shrink-0 ${insight.color}`} />
+          <div>
+            <span className={`text-xs font-medium ${insight.color}`}>{insight.label}: </span>
+            <span className="text-xs text-cosmos-muted">{insight.detail}</span>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function ValuePanel() {
   const { values, toggleValuePanel } = useStore();
 
@@ -207,6 +286,7 @@ export default function ValuePanel() {
           </div>
         ) : (
           <div className="space-y-3">
+            <ValuesEvolution values={values} />
             <p className="text-[10px] text-cosmos-muted/40 uppercase tracking-wider">
               Tap any value to see why it&apos;s scored this way
             </p>

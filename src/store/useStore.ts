@@ -46,10 +46,18 @@ interface AppState {
   loadingNotes: string;
   // Summary dismissal
   summaryDismissed: boolean;
+  // Force show summary even with pending judgments
+  forceShowSummary: boolean;
+  // Per-node processing state (for parallel judgment resolution)
+  processingNodeIds: Set<string>;
+  // Recently resolved nodes (for burst animation)
+  recentlyResolvedIds: Set<string>;
 
   // Actions
   setGoalText: (text: string) => void;
   setIsDecomposing: (v: boolean) => void;
+  addProcessingNode: (id: string) => void;
+  removeProcessingNode: (id: string) => void;
   setHasStarted: (v: boolean) => void;
   addNodes: (nodes: DecisionNode[]) => void;
   updateNode: (id: string, updates: Partial<DecisionNode>) => void;
@@ -67,6 +75,7 @@ interface AppState {
   addChatMessage: (message: ChatMessage) => void;
   setLoadingNotes: (notes: string) => void;
   setSummaryDismissed: (v: boolean) => void;
+  setForceShowSummary: (v: boolean) => void;
   // Session management
   saveCurrentSession: () => void;
   loadSession: (id: string) => void;
@@ -135,9 +144,20 @@ export const useStore = create<AppState>((set, get) => ({
   chatMessages: [],
   loadingNotes: "",
   summaryDismissed: false,
+  forceShowSummary: false,
+  processingNodeIds: new Set(),
+  recentlyResolvedIds: new Set(),
 
   setGoalText: (text) => set({ goalText: text }),
   setIsDecomposing: (v) => set({ isDecomposing: v }),
+  addProcessingNode: (id) =>
+    set((state) => ({ processingNodeIds: new Set([...state.processingNodeIds, id]) })),
+  removeProcessingNode: (id) =>
+    set((state) => {
+      const next = new Set(state.processingNodeIds);
+      next.delete(id);
+      return { processingNodeIds: next };
+    }),
   setHasStarted: (v) => set({ hasStarted: v }),
 
   addNodes: (newNodes) =>
@@ -188,7 +208,7 @@ export const useStore = create<AppState>((set, get) => ({
   toggleSessionPanel: () => set((s) => ({ showSessionPanel: !s.showSessionPanel })),
   setCritique: (c) => set({ critique: c }),
 
-  resolveJudgment: (nodeId, optionId) =>
+  resolveJudgment: (nodeId, optionId) => {
     set((state) => ({
       nodes: {
         ...state.nodes,
@@ -200,8 +220,18 @@ export const useStore = create<AppState>((set, get) => ({
         },
       },
       activeJudgmentId: null,
-      summaryDismissed: false, // reset so summary can show if all resolved
-    })),
+      summaryDismissed: false,
+      recentlyResolvedIds: new Set([...state.recentlyResolvedIds, nodeId]),
+    }));
+    // Clear after animation completes
+    setTimeout(() => {
+      set((state) => {
+        const next = new Set(state.recentlyResolvedIds);
+        next.delete(nodeId);
+        return { recentlyResolvedIds: next };
+      });
+    }, 800);
+  },
 
   setTheme: (theme) => {
     try {
@@ -219,6 +249,7 @@ export const useStore = create<AppState>((set, get) => ({
     set((state) => ({ chatMessages: [...state.chatMessages, message] })),
   setLoadingNotes: (notes) => set({ loadingNotes: notes }),
   setSummaryDismissed: (v) => set({ summaryDismissed: v }),
+  setForceShowSummary: (v) => set({ forceShowSummary: v, summaryDismissed: false }),
 
   saveCurrentSession: () => {
     const state = get();
@@ -264,6 +295,8 @@ export const useStore = create<AppState>((set, get) => ({
       showValuePanel: false,
       showSessionPanel: false,
       currentSessionId: id,
+      processingNodeIds: new Set(),
+      recentlyResolvedIds: new Set(),
     });
   },
 
@@ -300,6 +333,9 @@ export const useStore = create<AppState>((set, get) => ({
       chatMessages: [],
       loadingNotes: "",
       summaryDismissed: false,
+      forceShowSummary: false,
+      processingNodeIds: new Set(),
+      recentlyResolvedIds: new Set(),
     });
   },
 }));

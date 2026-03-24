@@ -29,6 +29,7 @@ const config: Config = {
       animation: {
         "pulse-glow": "pulse-glow 2s ease-in-out infinite",
         "node-bloom": "node-bloom 0.6s ease-out",
+        "resolve-burst": "resolve-burst 0.7s ease-out",
       },
       keyframes: {
         "pulse-glow": {
@@ -38,6 +39,11 @@ const config: Config = {
         "node-bloom": {
           "0%": { transform: "scale(0)", opacity: "0" },
           "100%": { transform: "scale(1)", opacity: "1" },
+        },
+        "resolve-burst": {
+          "0%": { boxShadow: "0 0 0px rgb(var(--resolved) / 0)", transform: "scale(1)" },
+          "30%": { boxShadow: "0 0 30px rgb(var(--resolved) / 0.6), 0 0 60px rgb(var(--resolved) / 0.3)", transform: "scale(1.05)" },
+          "100%": { boxShadow: "0 0 15px rgb(var(--resolved) / 0.3)", transform: "scale(1)" },
         },
       },
     },

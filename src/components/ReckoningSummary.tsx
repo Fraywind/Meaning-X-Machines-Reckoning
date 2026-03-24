@@ -111,6 +111,8 @@ export default function ReckoningSummary() {
     goalText,
     summaryDismissed,
     setSummaryDismissed,
+    forceShowSummary,
+    setForceShowSummary,
     toggleValuePanel,
     reset,
   } = useStore();
@@ -145,8 +147,9 @@ export default function ReckoningSummary() {
 
   const allResolved =
     stats.pending === 0 && stats.resolved > 0 && !summaryDismissed;
+  const showEarly = forceShowSummary && stats.resolved > 0 && !summaryDismissed;
 
-  if (!allResolved) return null;
+  if (!allResolved && !showEarly) return null;
 
   const topValues = values
     .sort((a, b) => b.strength - a.strength)
@@ -460,7 +463,7 @@ export default function ReckoningSummary() {
               &ldquo;The AI does the reckoning. You do the judging.&rdquo;
             </p>
             <p className="text-[10px] text-cosmos-muted/30 mt-1">
-              Inspired by Brian Cantwell Smith
+              &mdash; Inspired by Brian Cantwell Smith
             </p>
           </div>
         </div>

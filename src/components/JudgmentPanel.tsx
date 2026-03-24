@@ -25,7 +25,8 @@ export default function JudgmentPanel({ node }: Props) {
     addNodes,
     addValues,
     setCritique,
-    setIsDecomposing,
+    addProcessingNode,
+    removeProcessingNode,
     loadingNotes,
     setLoadingNotes,
   } = useStore();
@@ -35,8 +36,9 @@ export default function JudgmentPanel({ node }: Props) {
     setIsSubmitting(true);
 
     resolveJudgment(node.id, selectedId);
+    addProcessingNode(node.id);
+    setActiveJudgment(null); // Close panel so user can continue
 
-    setIsDecomposing(true);
     try {
       const goalWithNotes = loadingNotes.trim()
         ? `${goalText}\n\n--- Additional context from user ---\n${loadingNotes}`
@@ -58,7 +60,7 @@ export default function JudgmentPanel({ node }: Props) {
     } catch (err) {
       console.error("Failed to continue decomposition:", err);
     } finally {
-      setIsDecomposing(false);
+      removeProcessingNode(node.id);
       setIsSubmitting(false);
     }
   };
@@ -67,10 +69,10 @@ export default function JudgmentPanel({ node }: Props) {
     if (!clarifyText.trim()) return;
     setIsSubmitting(true);
 
-    // Resolve with a custom clarification instead of a preset option
     resolveJudgment(node.id, "user-clarification");
+    addProcessingNode(node.id);
+    setActiveJudgment(null);
 
-    setIsDecomposing(true);
     try {
       const goalWithNotes = loadingNotes.trim()
         ? `${goalText}\n\n--- Additional context from user ---\n${loadingNotes}`
@@ -91,7 +93,7 @@ export default function JudgmentPanel({ node }: Props) {
     } catch (err) {
       console.error("Failed to continue decomposition:", err);
     } finally {
-      setIsDecomposing(false);
+      removeProcessingNode(node.id);
       setIsSubmitting(false);
       setShowClarify(false);
       setClarifyText("");

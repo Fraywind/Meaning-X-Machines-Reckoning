@@ -122,9 +122,9 @@ export const themes: Record<ThemeId, ThemeConfig> = {
         [196, 181, 253],
         [129, 140, 248],
       ],
-      density: 8000,
-      speed: 0.5,
-      glowIntensity: 0.15,
+      density: 5500,
+      speed: 1.2,
+      glowIntensity: 0.25,
     },
     edgeDim: "#c8cdd4",
     scrollbarHover: "#d0d5dc",
@@ -163,33 +163,33 @@ export const themes: Record<ThemeId, ThemeConfig> = {
   nature: {
     id: "nature",
     name: "Nature",
-    description: "Forest, earth, and wood tones",
+    description: "Sunlit canopy with drifting leaves",
     colors: {
-      bg: "#1a1c14",
-      surface: "#242819",
-      border: "#3a3e2a",
-      muted: "#8a9468",
-      text: "#e4e8d4",
-      glow: "#7cb342",
-      judgment: "#e6a817",
-      conflict: "#d4553a",
-      resolved: "#4caf50",
-      reckoning: "#5d8a3c",
+      bg: "#e8eeea",
+      surface: "#f2f6f3",
+      border: "#c4d4c8",
+      muted: "#5a7360",
+      text: "#1a2e1e",
+      glow: "#3a8a50",
+      judgment: "#b45309",
+      conflict: "#b91c1c",
+      resolved: "#1a7a3a",
+      reckoning: "#2d6a4f",
     },
     starfield: {
       colors: [
-        [124, 179, 66],
-        [139, 195, 74],
-        [174, 213, 129],
-        [200, 230, 160],
-        [100, 160, 60],
+        [140, 180, 160], // sage
+        [170, 200, 190], // mist
+        [160, 195, 210], // sky blue
+        [190, 210, 200], // pale green
+        [175, 195, 215], // light blue
       ],
-      density: 3000,
-      speed: 0.3,
-      glowIntensity: 0.2,
+      density: 8000,
+      speed: 0.6,
+      glowIntensity: 0.15,
     },
-    edgeDim: "#3a4a2a",
-    scrollbarHover: "#4a5a3a",
+    edgeDim: "#a0b8a8",
+    scrollbarHover: "#b8ccbe",
   },
 };
 

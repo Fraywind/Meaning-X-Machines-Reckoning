@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useCallback } from "react";
+import { useMemo, useCallback, useState } from "react";
 import ReactFlow, {
   Background,
   Controls,
@@ -26,6 +26,7 @@ import ReckoningSummary from "./ReckoningSummary";
 import ThemeSwitcher from "./ThemeSwitcher";
 import Starfield from "./Starfield";
 import GuidePanel from "./GuidePanel";
+import { BookOpen, MessageSquare } from "lucide-react";
 import { DecisionNode } from "@/types";
 
 const nodeTypes: NodeTypes = {
@@ -125,8 +126,9 @@ function layoutTree(nodes: Record<string, DecisionNode>): {
 }
 
 export default function DecisionTreeView() {
-  const { nodes, activeJudgmentId, counterfactualNodeId, inspectedNodeId, showValuePanel, showSessionPanel, critique, isDecomposing } =
+  const { nodes, activeJudgmentId, counterfactualNodeId, inspectedNodeId, showValuePanel, showSessionPanel, critique, isDecomposing, forceShowSummary, setForceShowSummary } =
     useStore();
+  const [showReadyConfirm, setShowReadyConfirm] = useState(false);
 
   const { flowNodes, flowEdges } = useMemo(() => layoutTree(nodes), [nodes]);
 
@@ -142,6 +144,11 @@ export default function DecisionTreeView() {
   const counterfactualNode = counterfactualNodeId ? nodes[counterfactualNodeId] : null;
   const inspectedNode = inspectedNodeId ? nodes[inspectedNodeId] : null;
 
+  const nodeList = Object.values(nodes);
+  const resolvedCount = nodeList.filter((n) => n.type === "resolved").length;
+  const pendingCount = nodeList.filter((n) => n.type === "judgment" && n.status !== "resolved").length;
+  const canShowReady = resolvedCount > 0 && !forceShowSummary;
+
   return (
     <div className="w-full h-screen relative">
       <Starfield />
@@ -149,7 +156,7 @@ export default function DecisionTreeView() {
       {/* Loading overlay */}
       <ReckoningLoader />
 
-      {/* Reckoning Summary — shows when all judgments resolved */}
+      {/* Reckoning Summary — shows when all judgments resolved or user is ready */}
       <ReckoningSummary />
 
       <ReactFlow
@@ -208,21 +215,50 @@ export default function DecisionTreeView() {
       {/* Guide Panel — bottom right */}
       <GuidePanel />
 
+      {/* "I'm Ready" button — bottom left, next to ReactFlow controls */}
+      {canShowReady && (
+        <div className="fixed bottom-6 left-[52px] z-50">
+          {showReadyConfirm ? (
+            <div className="bg-cosmos-surface/95 backdrop-blur-sm border border-cosmos-glow/30 rounded-xl p-3 shadow-lg w-56">
+              <p className="text-xs text-cosmos-text mb-1.5">Generate your output now?</p>
+              <p className="text-[10px] text-cosmos-muted mb-3">
+                {pendingCount > 0
+                  ? `You have ${pendingCount} unresolved decision${pendingCount > 1 ? "s" : ""}. Skipped decisions won't be in the output.`
+                  : "All decisions are resolved."}
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    setForceShowSummary(true);
+                    setShowReadyConfirm(false);
+                  }}
+                  className="flex-1 px-2.5 py-1.5 text-xs rounded-lg bg-cosmos-resolved/20 border border-cosmos-resolved/40 text-cosmos-resolved hover:bg-cosmos-resolved/30 transition-all"
+                >
+                  Yes, I&apos;m ready
+                </button>
+                <button
+                  onClick={() => setShowReadyConfirm(false)}
+                  className="flex-1 px-2.5 py-1.5 text-xs rounded-lg bg-cosmos-surface border border-cosmos-border text-cosmos-muted hover:text-cosmos-text transition-all"
+                >
+                  Keep going
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowReadyConfirm(true)}
+              className="flex items-center gap-1.5 px-3 py-2 text-xs rounded-lg border bg-cosmos-surface/90 border-cosmos-border text-cosmos-muted hover:border-cosmos-resolved/30 hover:text-cosmos-resolved transition-all shadow-sm"
+            >
+              <span>&#10003;</span>
+              <span>I&apos;m Ready</span>
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Top bar */}
       <div className="absolute top-4 right-4 z-40 flex gap-2">
         <ThemeSwitcher />
-        <button
-          onClick={() => useStore.getState().setViewMode("notebook")}
-          className="px-3 py-1.5 text-xs rounded-lg border bg-cosmos-surface border-cosmos-border text-cosmos-muted hover:border-cosmos-glow/30 hover:text-cosmos-glow transition-all"
-        >
-          Notebook
-        </button>
-        <button
-          onClick={() => useStore.getState().setViewMode("chat")}
-          className="px-3 py-1.5 text-xs rounded-lg border bg-cosmos-surface border-cosmos-border text-cosmos-muted hover:border-cosmos-glow/30 hover:text-cosmos-glow transition-all"
-        >
-          Dialogue
-        </button>
         <button
           onClick={() => useStore.getState().saveCurrentSession()}
           className="px-3 py-1.5 text-xs rounded-lg border bg-cosmos-surface border-cosmos-border text-cosmos-muted hover:border-cosmos-resolved/30 hover:text-cosmos-resolved transition-all"
@@ -251,6 +287,18 @@ export default function DecisionTreeView() {
           }`}
         >
           Values Mirror
+        </button>
+        <button
+          onClick={() => useStore.getState().setViewMode("notebook")}
+          className="px-3 py-1.5 text-xs rounded-lg border bg-cosmos-surface border-cosmos-border text-cosmos-muted hover:border-cosmos-glow/30 hover:text-cosmos-text transition-all flex items-center gap-1"
+        >
+          <BookOpen className="w-3 h-3" /> Notebook
+        </button>
+        <button
+          onClick={() => useStore.getState().setViewMode("chat")}
+          className="px-3 py-1.5 text-xs rounded-lg border bg-cosmos-surface border-cosmos-border text-cosmos-muted hover:border-cosmos-glow/30 hover:text-cosmos-text transition-all flex items-center gap-1"
+        >
+          <MessageSquare className="w-3 h-3" /> Dialogue
         </button>
       </div>
     </div>

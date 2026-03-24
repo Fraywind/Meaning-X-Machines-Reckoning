@@ -15,14 +15,12 @@ import {
   Clock,
   ChevronDown,
   BookOpen,
-  Download,
-  Upload,
 } from "lucide-react";
 import { useStore, SavedSession } from "@/store/useStore";
+import ModePicker from "./ModePicker";
 import { safeFetch } from "@/lib/api";
 import Starfield from "./Starfield";
 import ThemeSwitcher from "./ThemeSwitcher";
-import ModePicker from "./ModePicker";
 
 export default function GoalInput() {
   const [text, setText] = useState("");
@@ -41,19 +39,18 @@ export default function GoalInput() {
 
   const toggleValue = (v: string) => {
     setStatedValues((prev) =>
-      prev.includes(v) ? prev.filter((x) => x !== v) : prev.length < 5 ? [...prev, v] : prev
+      prev.includes(v) ? prev.filter((x) => x !== v) : [...prev, v]
     );
   };
 
   const addCustomValue = () => {
     const trimmed = customValue.trim();
-    if (trimmed && !statedValues.includes(trimmed) && statedValues.length < 5) {
+    if (trimmed && !statedValues.includes(trimmed)) {
       setStatedValues((prev) => [...prev, trimmed]);
       setCustomValue("");
     }
   };
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const sessionFileRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
 
   const toggleRecording = useCallback(() => {
@@ -110,51 +107,12 @@ export default function GoalInput() {
   }, [isRecording]);
   const {
     setGoalText, setHasStarted, setIsDecomposing, addNodes, addValues, setCritique,
-    savedSessions, loadSessionsFromStorage, loadSession, viewMode, addChatMessage,
+    savedSessions, loadSessionsFromStorage, loadSession,
   } = useStore();
 
   useEffect(() => {
     loadSessionsFromStorage();
   }, [loadSessionsFromStorage]);
-
-  const handleExportSessions = () => {
-    const sessions = savedSessions;
-    if (sessions.length === 0) return;
-    const blob = new Blob([JSON.stringify(sessions, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `cascade-sessions-${new Date().toISOString().slice(0, 10)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const handleImportSession = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      try {
-        const data = JSON.parse(ev.target?.result as string);
-        const sessions: SavedSession[] = Array.isArray(data) ? data : [data];
-        // Merge into localStorage
-        const existing = savedSessions;
-        const merged = [...sessions.filter((s) => !existing.find((e) => e.id === s.id)), ...existing].slice(0, 10);
-        try {
-          localStorage.setItem("reckoning-sessions", JSON.stringify(merged));
-        } catch {}
-        loadSessionsFromStorage();
-        // If single session, load it directly
-        if (sessions.length === 1) {
-          loadSession(sessions[0].id);
-        }
-      } catch {
-        alert("Could not read this file. Make sure it is a Cascade session file.");
-      }
-    };
-    reader.readAsText(file);
-    e.target.value = "";
-  };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -195,22 +153,6 @@ export default function GoalInput() {
     setHasStarted(true);
     setIsDecomposing(true);
 
-    // Seed chat messages if in chat mode
-    if (viewMode === "chat") {
-      addChatMessage({
-        id: `user-goal-${Date.now()}`,
-        role: "user",
-        content: text,
-        timestamp: Date.now(),
-      });
-      addChatMessage({
-        id: `sys-start-${Date.now()}`,
-        role: "system",
-        content: "Breaking down your goal into a decision tree. I'll surface any points that need your judgment...",
-        timestamp: Date.now(),
-      });
-    }
-
     addNodes([
       {
         id: "goal-root",
@@ -244,17 +186,6 @@ export default function GoalInput() {
       addNodes(nodes);
       if (data.values) addValues(data.values);
       if (data.critique) setCritique(data.critique);
-
-      // Add summary chat message in chat mode
-      if (viewMode === "chat" && nodes.length > 0) {
-        const judgmentCount = nodes.filter((n: { type: string }) => n.type === "judgment").length;
-        addChatMessage({
-          id: `sys-decomposed-${Date.now()}`,
-          role: "system",
-          content: `I've mapped out ${nodes.length} considerations. ${judgmentCount > 0 ? `${judgmentCount} need your judgment — scroll down to decide.` : "Take a look at the tree."}`,
-          timestamp: Date.now(),
-        });
-      }
     } catch (err) {
       console.error("Failed to decompose:", err);
       alert("Connection error. Please check your internet and try again.");
@@ -262,21 +193,29 @@ export default function GoalInput() {
     } finally {
       setIsDecomposing(false);
     }
-  }, [text, attachments, statedValues, setGoalText, setHasStarted, setIsDecomposing, addNodes, addValues, setCritique, viewMode, addChatMessage]);
+  }, [text, attachments, setGoalText, setHasStarted, setIsDecomposing, addNodes, addValues, setCritique]);
 
   const examples = [
-    { text: "Build and launch an educational product for kids", icon: Gamepad2 },
+    { text: "Build and launch an educational product for 3-5 year olds to help learn ABCs", icon: Gamepad2 },
     { text: "How should a public university restructure its tuition model to make it affordable?", icon: GraduationCap },
-    { text: "Should I sell my house and relocate?", icon: Home },
+    { text: "Should I sell my $1.2M house in Hollywood and relocate to New York City?", icon: Home },
   ];
 
   return (
     <div className="relative h-screen overflow-y-auto">
       <Starfield />
 
-      {/* Theme switcher — top right */}
-      <div className="fixed top-4 right-4 z-30">
+      {/* Theme switcher — top right, highlighted on home */}
+      <div className="fixed top-4 right-4 z-30 [&_button]:border-cosmos-glow/30 [&_button]:text-cosmos-text/70">
         <ThemeSwitcher />
+        <motion.div
+          initial={{ opacity: 0, y: -4 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 2, duration: 0.6 }}
+          className="flex items-center justify-end gap-1 mt-1.5 pr-1 pointer-events-none"
+        >
+          <span className="text-[10px] text-cosmos-muted/50">try the Nature theme! &#8593;</span>
+        </motion.div>
       </div>
 
       {/* T561 label — left side */}
@@ -321,14 +260,17 @@ export default function GoalInput() {
                     .cl1 { animation: cascadeLine 3s ease-in-out infinite; animation-delay: 0.3s; }
                     .cl2 { animation: cascadeLine 3s ease-in-out infinite; animation-delay: 0.9s; }
                   `}</style>
-                  <circle cx="12" cy="4" r="2.5" className="cn1" />
-                  <line x1="10.5" y1="6" x2="6" y2="10" className="cl1" />
-                  <line x1="13.5" y1="6" x2="18" y2="10" className="cl1" />
-                  <circle cx="6" cy="12" r="2.5" className="cn2" />
-                  <circle cx="18" cy="12" r="2.5" className="cn2" />
-                  <line x1="6" y1="14.5" x2="9" y2="18" className="cl2" />
-                  <line x1="18" y1="14.5" x2="15" y2="18" className="cl2" />
-                  <circle cx="12" cy="20" r="2.5" className="cn3" />
+                  <circle cx="12" cy="3" r="2" className="cn1" />
+                  <line x1="10" y1="5" x2="4" y2="10" className="cl1" />
+                  <line x1="12" y1="5" x2="12" y2="10" className="cl1" />
+                  <line x1="14" y1="5" x2="20" y2="10" className="cl1" />
+                  <circle cx="4" cy="12" r="2" className="cn2" />
+                  <circle cx="12" cy="12" r="2" className="cn2" />
+                  <circle cx="20" cy="12" r="2" className="cn2" />
+                  <line x1="4" y1="14" x2="8" y2="19" className="cl2" />
+                  <line x1="12" y1="14" x2="12" y2="19" className="cl2" />
+                  <line x1="20" y1="14" x2="16" y2="19" className="cl2" />
+                  <circle cx="12" cy="21" r="2" className="cn3" />
                 </svg>
               </div>
               <h1 className="text-4xl font-display font-bold tracking-tight text-cosmos-text">
@@ -336,7 +278,7 @@ export default function GoalInput() {
               </h1>
             </div>
             <p className="text-cosmos-muted text-sm max-w-md mx-auto leading-relaxed">
-              AI maps the terrain. You choose the path.
+              AI breaks it down. You judge and choose.
             </p>
             <div className="mt-3 flex items-center justify-center gap-6 text-xs text-cosmos-muted/50">
               <span>Describe</span>
@@ -356,7 +298,7 @@ export default function GoalInput() {
           >
             <button
               onClick={() => setShowAbout(!showAbout)}
-              className="mx-auto flex items-center gap-2 px-4 py-2 text-xs text-cosmos-muted hover:text-cosmos-glow border border-cosmos-border/50 hover:border-cosmos-glow/20 rounded-xl transition-all"
+              className="mx-auto flex items-center gap-2 px-4 py-2 text-xs text-cosmos-text/70 hover:text-cosmos-glow border border-cosmos-glow/25 hover:border-cosmos-glow/40 rounded-xl transition-all shadow-[0_0_8px_rgba(var(--glow),0.08)]"
             >
               <BookOpen className="w-3.5 h-3.5" />
               What is this &amp; how does it work?
@@ -379,13 +321,16 @@ export default function GoalInput() {
                         What is Cascade?
                       </h3>
                       <p>
-                        Cascade is a thinking tool. You describe a complex goal, and the AI breaks it down
+                        Cascade is a thinking and planning tool. You describe a complex goal or task, and the AI breaks it down
                         into a map of sub-decisions, consequences, and paths you might not have seen coming.
-                        In any complex goal, there will inevitably be moments where a decision comes down to
-                        tradeoffs and preferences, choices that have a cascading effect on everything
-                        downstream. When the AI reaches one of those moments, <span className="text-cosmos-text">it
-                        detects it, surfaces the conflict and tradeoffs, and brings it to you.</span> You
-                        make the judgment call as the human. Your intent drives what happens next.
+                        Complex tasks are full of nuances and details that are easy to overlook or not even realize
+                        are there. Typically, AI just assumes or skips over these, and those silent assumptions can
+                        have real consequences downstream. In any complex goal or task, there will inevitably be
+                        moments where a decision comes down to tradeoffs and preferences &mdash; choices that have
+                        a cascading effect on everything that follows. When the AI reaches one of those moments,
+                        <span className="text-cosmos-text"> it detects it, surfaces the conflict and tradeoffs,
+                        and brings it to you.</span> You make the judgment call as the human. Your intent drives
+                        what happens next.
                       </p>
                     </div>
 
@@ -394,40 +339,65 @@ export default function GoalInput() {
                       <h3 className="text-cosmos-text font-medium text-xs uppercase tracking-wider mb-1.5">
                         How to use it
                       </h3>
-                      <ol className="space-y-1.5 text-cosmos-muted list-decimal list-inside">
-                        <li><span className="text-cosmos-text/80">Describe your goal</span> and a bit about who you are</li>
-                        <li>The AI expands it into a decision tree, and you&apos;ll see nodes branch out</li>
-                        <li><span className="text-cosmos-judgment">Yellow nodes</span> are judgment points, click <span className="text-cosmos-text/80">&ldquo;Decide now&rdquo;</span> to weigh in</li>
-                        <li>Choose an option, or clarify if none fit your situation</li>
-                        <li>Your choices ripple forward, revealing new branches and sometimes new conflicts</li>
-                        <li>Open the <span className="text-cosmos-text/80">Values Mirror</span> to see what your decisions reveal about what matters to you</li>
+                      <ol className="space-y-2.5 text-cosmos-muted list-decimal list-inside">
+                        <li><span className="text-cosmos-text/80">Describe your goal or task</span> with as much detail and context as you can. The more specific you are about your situation, constraints, and who you are, the better the output.</li>
+                        <li>The AI breaks down your complex goal or task into a decision tree of sub-decisions, dependencies, and consequences. Any point that requires a nuanced human call &mdash; something that depends on your values, intent, or priorities &mdash; gets flagged and brought back to you.</li>
+                        <li><span className="text-cosmos-judgment">Yellow nodes</span> are those judgment points. Click <span className="text-cosmos-text/80">&ldquo;Decide now&rdquo;</span> to see the options, tradeoffs, blind spots, and what&apos;s at stake. You decide which direction to go.</li>
+                        <li>If none of the options fit, you can clarify your situation and redirect the AI. Your choices cascade forward, generating new branches and sometimes surfacing new conflicts.</li>
+                        <li>Once all decisions are resolved, the output is a fully laid-out plan you can reference, document, or export as a prompt to build through your preferred AI tool.</li>
                       </ol>
+                      <p className="mt-3 text-cosmos-muted/60 text-xs italic">
+                        Tip: Open the <span className="text-cosmos-text/70">Values Mirror</span> at any point to see what your decisions reveal about your priorities, adjust your stated values, and get explanations for how they connect to your choices.
+                      </p>
                     </div>
 
                     {/* Why judgment matters */}
-                    <div className="pt-2 border-t border-cosmos-border/30">
+                    <div className="pt-2 border-t border-cosmos-border/30 space-y-3">
                       <h3 className="text-cosmos-text font-medium text-xs uppercase tracking-wider mb-1.5">
-                        Reckoning vs. Judgment
+                        Why It Matters: Reckoning vs. Judgment
                       </h3>
-                      <p>
-                        The late Professor <a href="https://ischool.utoronto.ca/news/obituary-brian-cantwell-smith-1950-to-2025/" target="_blank" rel="noopener noreferrer" className="text-cosmos-text underline underline-offset-2 hover:text-cosmos-glow transition-colors">Brian Cantwell Smith</a> identified
-                        two distinct kinds of intelligence. The first is <em>reckoning</em>: calculative rationality,
-                        pattern recognition, decomposition, logical inference. This is what AI does well, and it
-                        keeps getting better at it. The second is <em>judgment</em>: deliberative thought that is
-                        grounded in ethical commitment, moral weight, and a sense of responsibility to the situation
-                        you&apos;re actually in. Judgment isn&apos;t about what <em>can</em> be done. It&apos;s about
-                        what <em>should</em> be done, and being willing to stand behind that call.
-                      </p>
-                      <p className="mt-2">
-                        Smith&apos;s argument was that AI will produce world-changing reckoning systems, but nothing
-                        in AI as currently conceived comes close to what genuine judgment requires. AI doesn&apos;t have
-                        skin in the game. It has no stake in the outcome, no responsibility to the people affected,
-                        no consequences to live with. That&apos;s exactly why it can&apos;t replace human judgment.
-                        <span className="text-cosmos-text"> Joseph Weizenbaum</span> arrived at a similar conclusion
-                        in the 1970s: the moral dimension of a decision is not something you can hand off to a machine.
-                        Cascade is built on that distinction. The AI does the reckoning. The judgment, with all its
-                        moral weight, stays with you.
-                      </p>
+
+                      <div>
+                        <h4 className="text-cosmos-text/70 text-xs font-medium mb-1">Two kinds of intelligence</h4>
+                        <p>
+                          The late Professor <a href="https://ischool.utoronto.ca/news/obituary-brian-cantwell-smith-1950-to-2025/" target="_blank" rel="noopener noreferrer" className="text-cosmos-text underline underline-offset-2 hover:text-cosmos-glow transition-colors">Brian Cantwell Smith</a> identified
+                          two distinct kinds of intelligence. The first is <em>reckoning</em>: calculative rationality,
+                          pattern recognition, decomposition, logical inference. This is what AI does well, and it
+                          keeps getting better at it. The second is <em>judgment</em>: deliberative thought that is
+                          grounded in ethical commitment and a sense of responsibility to the situation
+                          you&apos;re in.
+                        </p>
+                      </div>
+
+                      <div>
+                        <h4 className="text-cosmos-text/70 text-xs font-medium mb-1">What judgment requires</h4>
+                        <p>
+                          Judgment isn&apos;t about what <em>can</em> be done. It&apos;s about
+                          what <em>should</em> be done, and being willing to stand behind that call. This capacity
+                          is uniquely human &mdash; it comes from lived experience, caring about outcomes, and
+                          understanding what&apos;s at stake for the people involved.
+                          Smith&apos;s argument was that AI will produce world-changing reckoning systems, but nothing
+                          in AI today comes close to what genuine judgment requires.
+                        </p>
+                      </div>
+
+                      <div>
+                        <h4 className="text-cosmos-text/70 text-xs font-medium mb-1">Why AI can&apos;t replace it</h4>
+                        <p>
+                          AI doesn&apos;t have skin in the game. It has no stake in the outcome, no responsibility
+                          to the people affected, no consequences to live with.
+                          <a href="https://www.theguardian.com/technology/2023/jul/25/joseph-weizenbaum-inventor-eliza-chatbot-turned-against-artificial-intelligence-ai" target="_blank" rel="noopener noreferrer" className="text-cosmos-text underline underline-offset-2 hover:text-cosmos-glow transition-colors"> Joseph Weizenbaum</a> arrived at a similar conclusion
+                          in the 1970s: the moral dimension of a decision is not something you can hand off to a machine.
+                        </p>
+                      </div>
+
+                      <div>
+                        <h4 className="text-cosmos-text/70 text-xs font-medium mb-1">Where Cascade fits</h4>
+                        <p>
+                          Cascade is built on that distinction. The AI does the reckoning. The human decides
+                          what matters, weighs the tradeoffs, and exercises the judgment that carries real consequences.
+                        </p>
+                      </div>
                     </div>
 
                     <div className="text-[11px] text-cosmos-muted/40 pt-3 border-t border-cosmos-border/20 space-y-1.5">
@@ -468,7 +438,7 @@ export default function GoalInput() {
                     handleSubmit();
                   }
                 }}
-                placeholder="Briefly describe what you want to accomplish and who you are. What's your role, your context, and your goal?"
+                placeholder="Describe a goal or task you're working on. What are you trying to accomplish, who are you, and what's the context?"
                 className="w-full bg-cosmos-surface/80 backdrop-blur-sm border border-cosmos-border rounded-2xl px-6 py-5 pr-14 text-base text-cosmos-text placeholder:text-cosmos-muted/40 focus:outline-none focus:border-cosmos-glow/50 resize-none transition-all duration-300 font-sans"
                 rows={4}
                 autoFocus
@@ -537,15 +507,15 @@ export default function GoalInput() {
             )}
 
             {/* Values section */}
-            <div className="mt-4">
+            <div className="mt-5">
               <button
                 onClick={() => setShowValues(!showValues)}
-                className="flex items-center gap-2 text-xs text-cosmos-muted/60 hover:text-cosmos-glow transition-colors"
+                className="flex items-center gap-2 text-sm text-cosmos-text/80 hover:text-cosmos-glow transition-colors"
               >
-                <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${showValues ? "rotate-180" : ""}`} />
-                <span>What matters to you?</span>
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${showValues ? "rotate-180" : ""}`} />
+                <span className="font-medium">What matters to you for this task?</span>
                 {statedValues.length > 0 && (
-                  <span className="text-cosmos-glow/60">({statedValues.length}/5)</span>
+                  <span className="text-cosmos-glow text-xs">({statedValues.length} selected)</span>
                 )}
               </button>
 
@@ -559,8 +529,8 @@ export default function GoalInput() {
                     className="overflow-hidden"
                   >
                     <div className="mt-3 p-4 bg-cosmos-surface/50 border border-cosmos-border/30 rounded-xl">
-                      <p className="text-[11px] text-cosmos-muted/60 mb-3">
-                        Optional: pick up to 5 values that matter most to you. The AI will reference these when surfacing tradeoffs and giving feedback.
+                      <p className="text-xs text-cosmos-muted/70 mb-3">
+                        Select or add values and priorities that matter to you. The more detailed, the better. The AI will reference these when surfacing tradeoffs and giving feedback.
                       </p>
                       <div className="flex flex-wrap gap-2 mb-3">
                         {suggestedValues.map((v) => (
@@ -587,7 +557,7 @@ export default function GoalInput() {
                         />
                         <button
                           onClick={addCustomValue}
-                          disabled={!customValue.trim() || statedValues.length >= 5}
+                          disabled={!customValue.trim()}
                           className="px-3 py-1.5 text-xs text-cosmos-glow/60 border border-cosmos-border/30 rounded-lg hover:bg-cosmos-glow/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                         >
                           Add
@@ -629,48 +599,93 @@ export default function GoalInput() {
             </div>
           </motion.div>
 
-          {/* Previous sessions + save/load */}
+          {/* Previous sessions */}
+          {savedSessions.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.9, duration: 0.8 }}
+              className="mt-8"
+            >
+              <div className="text-[10px] uppercase tracking-wider text-cosmos-muted/40 text-center mb-3">
+                Resume a previous deliberation
+              </div>
+              <div className="flex flex-wrap gap-2 justify-center">
+                {savedSessions.slice(0, 3).map((session) => (
+                  <button
+                    key={session.id}
+                    onClick={() => loadSession(session.id)}
+                    className="flex items-center gap-2 px-4 py-2.5 text-xs text-cosmos-muted border border-cosmos-border/40 rounded-xl hover:border-cosmos-glow/30 hover:text-cosmos-glow hover:bg-cosmos-glow/5 transition-all max-w-[280px]"
+                  >
+                    <Clock className="w-3 h-3 shrink-0" />
+                    <span className="truncate">{session.goalText}</span>
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          )}
+
+          {/* Save/Load session files */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.9, duration: 0.6 }}
-            className="mt-6 flex flex-wrap gap-1.5 justify-center items-center"
+            transition={{ delay: 1.0, duration: 0.8 }}
+            className="mt-4 flex items-center justify-center gap-3"
           >
-            {savedSessions.slice(0, 3).map((session) => (
+            <span className="text-[10px] text-cosmos-muted/30">or</span>
+            <label className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] text-cosmos-muted/50 border border-cosmos-border/30 rounded-lg hover:border-cosmos-glow/20 hover:text-cosmos-muted cursor-pointer transition-all">
+              <span>Load from file</span>
+              <input
+                type="file"
+                accept=".json"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  const reader = new FileReader();
+                  reader.onload = (ev) => {
+                    try {
+                      const data = JSON.parse(ev.target?.result as string);
+                      if (data.nodes && data.goalText) {
+                        const store = useStore.getState();
+                        store.setGoalText(data.goalText);
+                        store.addNodes(Object.values(data.nodes));
+                        if (data.values) store.setValues(data.values);
+                        if (data.critique) store.setCritique(data.critique);
+                        store.setHasStarted(true);
+                      }
+                    } catch {
+                      alert("Invalid session file.");
+                    }
+                  };
+                  reader.readAsText(file);
+                }}
+              />
+            </label>
+            {Object.keys(useStore.getState().nodes).length > 0 && (
               <button
-                key={session.id}
-                onClick={() => loadSession(session.id)}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] text-cosmos-muted/50 border border-cosmos-border/30 rounded-lg hover:border-cosmos-glow/20 hover:text-cosmos-glow transition-all max-w-[220px]"
+                onClick={() => {
+                  const state = useStore.getState();
+                  const data = {
+                    goalText: state.goalText,
+                    nodes: state.nodes,
+                    values: state.values,
+                    critique: state.critique,
+                    exportedAt: new Date().toISOString(),
+                  };
+                  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = `cascade-session-${Date.now()}.json`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] text-cosmos-muted/50 border border-cosmos-border/30 rounded-lg hover:border-cosmos-glow/20 hover:text-cosmos-muted transition-all"
               >
-                <Clock className="w-2.5 h-2.5 shrink-0" />
-                <span className="truncate">{session.goalText}</span>
-              </button>
-            ))}
-            {savedSessions.length > 0 && (
-              <button
-                onClick={handleExportSessions}
-                className="flex items-center gap-1 px-2.5 py-1.5 text-[10px] text-cosmos-muted/35 border border-cosmos-border/20 rounded-lg hover:border-cosmos-glow/20 hover:text-cosmos-glow transition-all"
-                title="Download your sessions as a file"
-              >
-                <Download className="w-2.5 h-2.5" />
-                Save
+                Save to file
               </button>
             )}
-            <button
-              onClick={() => sessionFileRef.current?.click()}
-              className="flex items-center gap-1 px-2.5 py-1.5 text-[10px] text-cosmos-muted/35 border border-cosmos-border/20 rounded-lg hover:border-cosmos-glow/20 hover:text-cosmos-glow transition-all"
-              title="Load a session file"
-            >
-              <Upload className="w-2.5 h-2.5" />
-              Load
-            </button>
-            <input
-              ref={sessionFileRef}
-              type="file"
-              accept=".json"
-              onChange={handleImportSession}
-              className="hidden"
-            />
           </motion.div>
 
           {/* Footer disclaimer */}
@@ -687,6 +702,16 @@ export default function GoalInput() {
                 passwords, or confidential data. Responses are generated and may not always be accurate.
               </p>
             </div>
+          </motion.div>
+
+          {/* Built by badge */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 1.5, duration: 1 }}
+            className="fixed bottom-4 right-4 z-20"
+          >
+            <span className="text-[10px] text-cosmos-muted/40">Built using Claude Opus 4.6</span>
           </motion.div>
         </div>
       </motion.div>

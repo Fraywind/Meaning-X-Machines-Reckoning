@@ -51,7 +51,8 @@ export default function NodeDetailPanel({ node }: Props) {
   const {
     setInspectedNode, setCounterfactualNode,
     resolveJudgment,
-    nodes, goalText, values, addNodes, addValues, setCritique, setIsDecomposing,
+    nodes, goalText, values, addNodes, addValues, setCritique,
+    addProcessingNode, removeProcessingNode,
     loadingNotes, setLoadingNotes,
   } = useStore();
   const [showClarify, setShowClarify] = useState(false);
@@ -77,7 +78,7 @@ export default function NodeDetailPanel({ node }: Props) {
   const handleClarify = async () => {
     if (!clarifyText.trim()) return;
     setIsSending(true);
-    setIsDecomposing(true);
+    addProcessingNode(node.id);
 
     try {
       const goalWithNotes = loadingNotes.trim()
@@ -103,7 +104,7 @@ export default function NodeDetailPanel({ node }: Props) {
       console.error("Clarify failed:", err);
     } finally {
       setIsSending(false);
-      setIsDecomposing(false);
+      removeProcessingNode(node.id);
     }
   };
 
@@ -112,8 +113,10 @@ export default function NodeDetailPanel({ node }: Props) {
     setIsResolving(true);
 
     resolveJudgment(node.id, selectedOptionId);
+    addProcessingNode(node.id);
+    // Close panel immediately so user can continue exploring
+    setInspectedNode(null);
 
-    setIsDecomposing(true);
     try {
       const goalWithNotes = loadingNotes.trim()
         ? `${goalText}\n\n--- Additional context from user ---\n${loadingNotes}`
@@ -135,9 +138,8 @@ export default function NodeDetailPanel({ node }: Props) {
     } catch (err) {
       console.error("Failed to continue decomposition:", err);
     } finally {
-      setIsDecomposing(false);
+      removeProcessingNode(node.id);
       setIsResolving(false);
-      setInspectedNode(null);
     }
   };
 
@@ -146,8 +148,9 @@ export default function NodeDetailPanel({ node }: Props) {
     setIsResolving(true);
 
     resolveJudgment(node.id, "user-clarification");
+    addProcessingNode(node.id);
+    setInspectedNode(null);
 
-    setIsDecomposing(true);
     try {
       const goalWithNotes = loadingNotes.trim()
         ? `${goalText}\n\n--- Additional context from user ---\n${loadingNotes}`
@@ -168,7 +171,7 @@ export default function NodeDetailPanel({ node }: Props) {
     } catch (err) {
       console.error("Failed to continue decomposition:", err);
     } finally {
-      setIsDecomposing(false);
+      removeProcessingNode(node.id);
       setIsResolving(false);
       setShowJudgmentClarify(false);
       setJudgmentClarifyText("");
@@ -209,7 +212,7 @@ export default function NodeDetailPanel({ node }: Props) {
           {node.type === "reckoning" && (
             <div className="mb-5 p-3 bg-cosmos-reckoning/5 border border-cosmos-reckoning/15 rounded-lg">
               <p className="text-xs text-cosmos-muted">
-                This is a <span className="text-cosmos-reckoning font-medium">reckoning node</span>,
+                This is a <span className="text-cosmos-reckoning font-medium">reckoning node</span> &mdash;
                 the AI determined this step based on logic and facts. No value judgment was needed here.
               </p>
             </div>

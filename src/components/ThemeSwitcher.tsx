@@ -6,7 +6,7 @@ import { Palette } from "lucide-react";
 import { useStore } from "@/store/useStore";
 import { themes, ThemeId, applyTheme, getTheme } from "@/lib/themes";
 
-const themeList: ThemeId[] = ["starfield", "cybernetics", "light", "cute", "nature"];
+const themeList: ThemeId[] = ["starfield", "light", "cute", "cybernetics", "nature"];
 
 const themeIcons: Record<ThemeId, string> = {
   starfield: "\u2728",   // sparkles
