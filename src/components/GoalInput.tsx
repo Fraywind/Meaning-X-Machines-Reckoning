@@ -599,40 +599,16 @@ export default function GoalInput() {
             </div>
           </motion.div>
 
-          {/* Previous sessions — compact */}
-          {savedSessions.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.9, duration: 0.8 }}
-              className="mt-4"
-            >
-              <div className="flex flex-wrap items-center justify-center gap-1.5">
-                <span className="text-[10px] text-cosmos-muted/30 mr-1">Resume:</span>
-                {savedSessions.slice(0, 3).map((session) => (
-                  <button
-                    key={session.id}
-                    onClick={() => loadSession(session.id)}
-                    className="flex items-center gap-1 px-2.5 py-1 text-[11px] text-cosmos-muted/50 border border-cosmos-border/30 rounded-lg hover:border-cosmos-glow/20 hover:text-cosmos-muted transition-all max-w-[200px]"
-                  >
-                    <Clock className="w-2.5 h-2.5 shrink-0" />
-                    <span className="truncate">{session.goalText}</span>
-                  </button>
-                ))}
-              </div>
-            </motion.div>
-          )}
-
-          {/* Save/Load session files */}
+          {/* Load session from file */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 1.0, duration: 0.8 }}
+            transition={{ delay: 0.9, duration: 0.8 }}
             className="mt-4 flex items-center justify-center gap-3"
           >
-            <span className="text-[10px] text-cosmos-muted/30">or</span>
             <label className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] text-cosmos-muted/50 border border-cosmos-border/30 rounded-lg hover:border-cosmos-glow/20 hover:text-cosmos-muted cursor-pointer transition-all">
-              <span>Load from file</span>
+              <Clock className="w-3 h-3" />
+              <span>Resume from saved file</span>
               <input
                 type="file"
                 accept=".json"

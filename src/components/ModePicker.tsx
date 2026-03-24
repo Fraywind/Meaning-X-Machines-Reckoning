@@ -52,9 +52,6 @@ export default function ModePicker() {
           </button>
         ))}
       </div>
-      <p className="text-center text-[10px] text-cosmos-muted/25 mt-2">
-        Pick a mode, or just start. You can switch anytime.
-      </p>
     </motion.div>
   );
 }

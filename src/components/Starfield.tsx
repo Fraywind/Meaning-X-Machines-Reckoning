@@ -1080,21 +1080,13 @@ export default function Starfield() {
         matureCheckTimer++;
         if (!natureMature && matureCheckTimer % 60 === 0) {
           natureMature = checkMaturity();
-          if (natureMature) {
-            spawnHangingAnimals();
-          }
         }
 
-        // Draw hanging animals
+        // Spawn and draw butterflies once mature
         if (natureMature) {
-          drawHangingAnimals();
-
-          // Spawn butterflies gradually
           if (butterflies.length < 8 && Math.random() < 0.012) {
             spawnButterfly();
           }
-
-          // Draw butterflies
           for (const b of butterflies) {
             drawButterfly(b);
           }

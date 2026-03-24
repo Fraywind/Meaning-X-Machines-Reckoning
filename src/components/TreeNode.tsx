@@ -26,12 +26,20 @@ const iconMap = {
 };
 
 function TreeNode({ data }: NodeProps<DecisionNode>) {
-  const { setActiveJudgment, setCounterfactualNode, setInspectedNode, processingNodeIds, recentlyResolvedIds } = useStore();
+  const { setActiveJudgment, setCounterfactualNode, setInspectedNode, processingNodeIds, recentlyResolvedIds, theme } = useStore();
   const isProcessing = processingNodeIds.has(data.id);
   const justResolved = recentlyResolvedIds.has(data.id);
 
   const depth = data.depth ?? 0;
   const Icon = iconMap[data.type] || CircleDot;
+
+  // Nature theme: wood-log styling per node type
+  const natureWoodClass = theme === "nature"
+    ? data.type === "judgment" ? "nature-wood-judgment"
+      : data.type === "reckoning" ? "nature-wood-reckoning"
+      : data.type === "resolved" ? "nature-wood-resolved"
+      : "nature-wood-base"
+    : "";
 
   // Visual hierarchy: earlier nodes are larger and more prominent
   const isRoot = depth === 0;
@@ -131,6 +139,7 @@ function TreeNode({ data }: NodeProps<DecisionNode>) {
       className={`
         rounded-xl ${borderWidth} ${bgClass} backdrop-blur-sm
         ${borderColor} ${glowClass} ${sizeClass} ${opacityClass}
+        ${natureWoodClass}
         cursor-pointer hover:brightness-110 transition-all
         ${data.type === "judgment" && data.status !== "resolved" ? "animate-pulse-glow" : ""}
         ${justResolved ? "animate-resolve-burst" : ""}

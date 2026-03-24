@@ -189,6 +189,64 @@ body {
   box-shadow: 0 0 18px rgb(var(--glow) / 0.1), 0 0 36px rgb(var(--glow) / 0.03);
 }
 
+/* Nature theme: wood-log node styling */
+[data-theme="nature"] .react-flow__node {
+  border-radius: 12px !important;
+}
+
+[data-theme="nature"] .nature-wood-base {
+  background-image:
+    repeating-linear-gradient(
+      88deg,
+      transparent,
+      transparent 4px,
+      rgba(120, 80, 40, 0.06) 4px,
+      rgba(120, 80, 40, 0.06) 5px
+    ),
+    linear-gradient(180deg, rgba(90, 60, 30, 0.06) 0%, transparent 50%, rgba(90, 60, 30, 0.06) 100%);
+}
+
+[data-theme="nature"] .nature-wood-judgment {
+  background-image:
+    repeating-linear-gradient(
+      88deg,
+      transparent,
+      transparent 4px,
+      rgba(154, 66, 0, 0.08) 4px,
+      rgba(154, 66, 0, 0.08) 5px
+    ),
+    linear-gradient(180deg, rgba(154, 66, 0, 0.1) 0%, transparent 50%, rgba(154, 66, 0, 0.08) 100%);
+  border-color: rgba(154, 66, 0, 0.45) !important;
+  box-shadow: 0 2px 12px rgba(154, 66, 0, 0.15);
+}
+
+[data-theme="nature"] .nature-wood-reckoning {
+  background-image:
+    repeating-linear-gradient(
+      88deg,
+      transparent,
+      transparent 4px,
+      rgba(30, 90, 63, 0.08) 4px,
+      rgba(30, 90, 63, 0.08) 5px
+    ),
+    linear-gradient(180deg, rgba(30, 90, 63, 0.1) 0%, transparent 50%, rgba(30, 90, 63, 0.08) 100%);
+  border-color: rgba(30, 90, 63, 0.45) !important;
+  box-shadow: 0 2px 12px rgba(30, 90, 63, 0.15);
+}
+
+[data-theme="nature"] .nature-wood-resolved {
+  background-image:
+    repeating-linear-gradient(
+      88deg,
+      transparent,
+      transparent 4px,
+      rgba(21, 105, 46, 0.06) 4px,
+      rgba(21, 105, 46, 0.06) 5px
+    ),
+    linear-gradient(180deg, rgba(21, 105, 46, 0.08) 0%, transparent 50%, rgba(21, 105, 46, 0.06) 100%);
+  border-color: rgba(21, 105, 46, 0.4) !important;
+}
+
 /* Loading progress bar animation */
 @keyframes loading-shimmer {
   0% { background-position: -200% 0; }
