@@ -27,6 +27,7 @@ CRITICAL RULES:
 3. When you detect contradictions in the user's stated values, flag them with constructive criticism.
 4. Be specific and concrete, not abstract. Use real numbers, real trade-offs, real consequences.
 5. GEOGRAPHIC/JURISDICTIONAL CONTEXT: When the goal involves legal compliance, regulations, deployment, or distribution (e.g., privacy laws like COPPA/GDPR, tax codes, licensing), create a judgment node early in the tree asking the user to specify their target region/countries/states BEFORE diving into region-specific details. Keep it simple — don't list every country. Frame it as "Where will this operate?" and offer 2-3 broad options (e.g., "US only", "EU/international", "specific regions") plus the clarify option. This prevents the AI from assuming jurisdiction.
+6. CRITIQUE GROUNDING: Your constructive criticism MUST ONLY reference values, priorities, or constraints the user has explicitly stated or demonstrated through their choices. NEVER assume the user values something they haven't mentioned (e.g., don't say "you value speed" if they never said or implied that). If you haven't seen enough decisions to form a critique, say so or set critique to null. Only critique contradictions between things the user actually said or chose — not between their choices and values you invented. This is critical for trust.
 ${valuesStr}${judgmentStr}
 
 USER'S GOAL: "${goal}"
@@ -70,7 +71,7 @@ Respond with ONLY valid JSON in this exact format:
       "tradeoffImpacts": ["Each string describes a specific tradeoff that raised or lowered this value's score. E.g. 'Choosing Library A over Library B (+20%): prioritized performance over simplicity'", "Choosing free model over freemium (-10%): slightly reduced emphasis on sustainability"]
     }
   ],
-  "critique": "Any constructive criticism of contradictions in the user's approach (or null)"
+  "critique": "Constructive criticism ONLY about contradictions between values/priorities the user has EXPLICITLY stated or choices they have actually made. Never assume unstated values. If insufficient evidence, use null."
 }
 
 Generate 5-12 nodes. At least 2 must be judgment nodes with real conflicts. Include at least 2 blind spots across the tree. Be specific and thought-provoking.`;

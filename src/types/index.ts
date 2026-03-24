@@ -1,5 +1,9 @@
 export type NodeType = "goal" | "reckoning" | "judgment" | "resolved" | "counterfactual";
 
+export type ViewMode = "tree" | "notebook" | "chat";
+
+export type ExportFormat = "prompt" | "notebook";
+
 export interface DecisionNode {
   id: string;
   type: NodeType;

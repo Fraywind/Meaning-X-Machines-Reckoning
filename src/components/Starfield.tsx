@@ -58,6 +58,7 @@ export default function Starfield() {
     const isCybernetics = theme === "cybernetics";
     const isLight = theme === "light";
     const isCute = theme === "cute";
+    const isNature = theme === "nature";
 
     let animationId: number;
     let stars: Star[] = [];
@@ -81,7 +82,9 @@ export default function Starfield() {
           ? Math.random() * 0.3 + 0.05
           : isCute
             ? Math.random() * 0.4 + 0.2
-            : Math.random() * 0.6 + 0.1;
+            : isNature
+              ? Math.random() * 0.35 + 0.1
+              : Math.random() * 0.6 + 0.1;
         stars.push({
           x: Math.random() * canvas!.width,
           y: Math.random() * canvas!.height,
@@ -89,9 +92,11 @@ export default function Starfield() {
             ? Math.random() * 1.5 + 0.2
             : isCute
               ? Math.random() * 3.5 + 1
-              : isStarfield
-                ? Math.random() * 2.5 + 0.3
-                : Math.random() * 2 + 0.3,
+              : isNature
+                ? Math.random() * 2.5 + 0.5
+                : isStarfield
+                  ? Math.random() * 2.5 + 0.3
+                  : Math.random() * 2 + 0.3,
           baseOpacity,
           opacity: baseOpacity,
           speed: isStarfield
@@ -158,6 +163,15 @@ export default function Starfield() {
           // Gentle float upward with wobbly sine drift
           star.y -= star.speed * 0.04 * themeSpeed;
           star.x += Math.sin(time * 0.002 + star.twinklePhase) * 0.15;
+        } else if (isNature) {
+          // Firefly-like: slow wandering with occasional pauses
+          const fireflyCycle = Math.sin(time * 0.001 + star.twinklePhase * 3);
+          const isResting = fireflyCycle < -0.5;
+          if (!isResting) {
+            star.x += Math.sin(time * 0.002 + star.driftAngle) * 0.2 * themeSpeed;
+            star.y += Math.cos(time * 0.0015 + star.driftAngle * 1.5) * 0.15 * themeSpeed;
+            star.driftAngle += Math.sin(time * 0.0003 + star.twinklePhase) * 0.003;
+          }
         } else if (isStarfield) {
           // Lively drift: each star floats in its own direction with gentle wandering
           const driftX = Math.cos(star.driftAngle) * star.speed * 0.3 * themeSpeed;

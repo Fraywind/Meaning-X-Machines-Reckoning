@@ -25,7 +25,7 @@ const iconMap = {
 };
 
 function TreeNode({ data }: NodeProps<DecisionNode>) {
-  const { setActiveJudgment, setCounterfactualNode, setInspectedNode } = useStore();
+  const { setActiveJudgment, setCounterfactualNode, setInspectedNode, theme } = useStore();
 
   const depth = data.depth ?? 0;
   const Icon = iconMap[data.type] || CircleDot;
@@ -99,6 +99,16 @@ function TreeNode({ data }: NodeProps<DecisionNode>) {
             ? "text-cosmos-glow"
             : "text-cosmos-reckoning";
 
+  // Nature theme wood texture classes
+  const natureWoodClass =
+    theme === "nature"
+      ? data.type === "judgment"
+        ? "nature-wood-judgment"
+        : data.type === "resolved"
+          ? "nature-wood-resolved"
+          : "nature-wood"
+      : "";
+
   const bgClass = isPivot
     ? "bg-cosmos-surface"
     : "bg-cosmos-surface/80";
@@ -127,7 +137,7 @@ function TreeNode({ data }: NodeProps<DecisionNode>) {
       onClick={handleClick}
       className={`
         rounded-xl ${borderWidth} ${bgClass} backdrop-blur-sm
-        ${borderColor} ${glowClass} ${sizeClass} ${opacityClass}
+        ${borderColor} ${glowClass} ${sizeClass} ${opacityClass} ${natureWoodClass}
         cursor-pointer hover:brightness-110 transition-all
         ${data.type === "judgment" && data.status !== "resolved" ? "animate-pulse-glow" : ""}
       `}

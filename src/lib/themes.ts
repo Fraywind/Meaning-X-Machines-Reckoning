@@ -1,4 +1,4 @@
-export type ThemeId = "starfield" | "cybernetics" | "light" | "cute";
+export type ThemeId = "starfield" | "cybernetics" | "light" | "cute" | "nature";
 
 export interface ThemeConfig {
   id: ThemeId;
@@ -159,6 +159,37 @@ export const themes: Record<ThemeId, ThemeConfig> = {
     },
     edgeDim: "#f0c0d4",
     scrollbarHover: "#f5d0e0",
+  },
+  nature: {
+    id: "nature",
+    name: "Nature",
+    description: "Forest, earth, and wood tones",
+    colors: {
+      bg: "#1a1c14",
+      surface: "#242819",
+      border: "#3a3e2a",
+      muted: "#8a9468",
+      text: "#e4e8d4",
+      glow: "#7cb342",
+      judgment: "#e6a817",
+      conflict: "#d4553a",
+      resolved: "#4caf50",
+      reckoning: "#5d8a3c",
+    },
+    starfield: {
+      colors: [
+        [124, 179, 66],
+        [139, 195, 74],
+        [174, 213, 129],
+        [200, 230, 160],
+        [100, 160, 60],
+      ],
+      density: 3000,
+      speed: 0.3,
+      glowIntensity: 0.2,
+    },
+    edgeDim: "#3a4a2a",
+    scrollbarHover: "#4a5a3a",
   },
 };
 

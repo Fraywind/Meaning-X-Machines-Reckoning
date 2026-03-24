@@ -212,6 +212,18 @@ export default function DecisionTreeView() {
       <div className="absolute top-4 right-4 z-40 flex gap-2">
         <ThemeSwitcher />
         <button
+          onClick={() => useStore.getState().setViewMode("notebook")}
+          className="px-3 py-1.5 text-xs rounded-lg border bg-cosmos-surface border-cosmos-border text-cosmos-muted hover:border-cosmos-glow/30 hover:text-cosmos-glow transition-all"
+        >
+          Notebook
+        </button>
+        <button
+          onClick={() => useStore.getState().setViewMode("chat")}
+          className="px-3 py-1.5 text-xs rounded-lg border bg-cosmos-surface border-cosmos-border text-cosmos-muted hover:border-cosmos-glow/30 hover:text-cosmos-glow transition-all"
+        >
+          Dialogue
+        </button>
+        <button
           onClick={() => useStore.getState().saveCurrentSession()}
           className="px-3 py-1.5 text-xs rounded-lg border bg-cosmos-surface border-cosmos-border text-cosmos-muted hover:border-cosmos-resolved/30 hover:text-cosmos-resolved transition-all"
         >

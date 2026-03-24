@@ -1,8 +1,16 @@
 "use client";
 
 import { create } from "zustand";
-import { DecisionNode, UserValue } from "@/types";
+import { DecisionNode, UserValue, ViewMode } from "@/types";
 import { ThemeId } from "@/lib/themes";
+
+export interface ChatMessage {
+  id: string;
+  role: "user" | "system";
+  content: string;
+  timestamp: number;
+  relatedNodeIds?: string[];
+}
 
 export interface SavedSession {
   id: string;
@@ -30,6 +38,10 @@ interface AppState {
   currentSessionId: string | null;
   // Theme
   theme: ThemeId;
+  // View mode
+  viewMode: ViewMode;
+  // Chat messages (for chat mode)
+  chatMessages: ChatMessage[];
   // Loading notes (user can add context while AI reckons)
   loadingNotes: string;
   // Summary dismissal
@@ -51,6 +63,8 @@ interface AppState {
   setCritique: (c: string | null) => void;
   resolveJudgment: (nodeId: string, optionId: string) => void;
   setTheme: (theme: ThemeId) => void;
+  setViewMode: (mode: ViewMode) => void;
+  addChatMessage: (message: ChatMessage) => void;
   setLoadingNotes: (notes: string) => void;
   setSummaryDismissed: (v: boolean) => void;
   // Session management
@@ -63,14 +77,25 @@ interface AppState {
 
 const STORAGE_KEY = "reckoning-sessions";
 const THEME_KEY = "reckoning-theme";
+const VIEW_MODE_KEY = "reckoning-view-mode";
 
 function readTheme(): ThemeId {
   try {
     const raw = localStorage.getItem(THEME_KEY);
-    if (raw === "starfield" || raw === "cybernetics" || raw === "light" || raw === "cute") return raw;
+    if (raw === "starfield" || raw === "cybernetics" || raw === "light" || raw === "cute" || raw === "nature") return raw;
     return "starfield";
   } catch {
     return "starfield";
+  }
+}
+
+function readViewMode(): ViewMode {
+  try {
+    const raw = localStorage.getItem(VIEW_MODE_KEY);
+    if (raw === "tree" || raw === "notebook" || raw === "chat") return raw;
+    return "tree";
+  } catch {
+    return "tree";
   }
 }
 
@@ -106,6 +131,8 @@ export const useStore = create<AppState>((set, get) => ({
   savedSessions: [],
   currentSessionId: null,
   theme: "starfield" as ThemeId,
+  viewMode: "tree" as ViewMode,
+  chatMessages: [],
   loadingNotes: "",
   summaryDismissed: false,
 
@@ -182,6 +209,14 @@ export const useStore = create<AppState>((set, get) => ({
     } catch {}
     set({ theme });
   },
+  setViewMode: (mode) => {
+    try {
+      localStorage.setItem(VIEW_MODE_KEY, mode);
+    } catch {}
+    set({ viewMode: mode });
+  },
+  addChatMessage: (message) =>
+    set((state) => ({ chatMessages: [...state.chatMessages, message] })),
   setLoadingNotes: (notes) => set({ loadingNotes: notes }),
   setSummaryDismissed: (v) => set({ summaryDismissed: v }),
 
@@ -239,7 +274,7 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   loadSessionsFromStorage: () => {
-    set({ savedSessions: readSessions(), theme: readTheme() });
+    set({ savedSessions: readSessions(), theme: readTheme(), viewMode: readViewMode() });
   },
 
   reset: () => {
@@ -262,6 +297,7 @@ export const useStore = create<AppState>((set, get) => ({
       showSessionPanel: false,
       critique: null,
       currentSessionId: null,
+      chatMessages: [],
       loadingNotes: "",
       summaryDismissed: false,
     });

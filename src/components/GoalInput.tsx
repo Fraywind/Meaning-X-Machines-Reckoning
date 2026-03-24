@@ -20,6 +20,7 @@ import { useStore, SavedSession } from "@/store/useStore";
 import { safeFetch } from "@/lib/api";
 import Starfield from "./Starfield";
 import ThemeSwitcher from "./ThemeSwitcher";
+import ModePicker from "./ModePicker";
 
 export default function GoalInput() {
   const [text, setText] = useState("");
@@ -106,7 +107,7 @@ export default function GoalInput() {
   }, [isRecording]);
   const {
     setGoalText, setHasStarted, setIsDecomposing, addNodes, addValues, setCritique,
-    savedSessions, loadSessionsFromStorage, loadSession,
+    savedSessions, loadSessionsFromStorage, loadSession, viewMode, addChatMessage,
   } = useStore();
 
   useEffect(() => {
@@ -152,6 +153,22 @@ export default function GoalInput() {
     setHasStarted(true);
     setIsDecomposing(true);
 
+    // Seed chat messages if in chat mode
+    if (viewMode === "chat") {
+      addChatMessage({
+        id: `user-goal-${Date.now()}`,
+        role: "user",
+        content: text,
+        timestamp: Date.now(),
+      });
+      addChatMessage({
+        id: `sys-start-${Date.now()}`,
+        role: "system",
+        content: "Breaking down your goal into a decision tree. I'll surface any points that need your judgment...",
+        timestamp: Date.now(),
+      });
+    }
+
     addNodes([
       {
         id: "goal-root",
@@ -185,6 +202,17 @@ export default function GoalInput() {
       addNodes(nodes);
       if (data.values) addValues(data.values);
       if (data.critique) setCritique(data.critique);
+
+      // Add summary chat message in chat mode
+      if (viewMode === "chat" && nodes.length > 0) {
+        const judgmentCount = nodes.filter((n: { type: string }) => n.type === "judgment").length;
+        addChatMessage({
+          id: `sys-decomposed-${Date.now()}`,
+          role: "system",
+          content: `I've mapped out ${nodes.length} considerations. ${judgmentCount > 0 ? `${judgmentCount} need your judgment — scroll down to decide.` : "Take a look at the tree."}`,
+          timestamp: Date.now(),
+        });
+      }
     } catch (err) {
       console.error("Failed to decompose:", err);
       alert("Connection error. Please check your internet and try again.");
@@ -192,7 +220,7 @@ export default function GoalInput() {
     } finally {
       setIsDecomposing(false);
     }
-  }, [text, attachments, setGoalText, setHasStarted, setIsDecomposing, addNodes, addValues, setCritique]);
+  }, [text, attachments, statedValues, setGoalText, setHasStarted, setIsDecomposing, addNodes, addValues, setCritique, viewMode, addChatMessage]);
 
   const examples = [
     { text: "Build and launch an educational product for kids", icon: Gamepad2 },
@@ -378,6 +406,9 @@ export default function GoalInput() {
               )}
             </AnimatePresence>
           </motion.div>
+
+          {/* Mode picker */}
+          <ModePicker />
 
           {/* Input */}
           <motion.div
