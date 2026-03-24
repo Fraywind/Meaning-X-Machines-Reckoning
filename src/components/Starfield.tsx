@@ -135,6 +135,7 @@ interface HangingAnimal {
 export default function Starfield() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const theme = useStore((s) => s.theme);
+  const hasStarted = useStore((s) => s.hasStarted);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -271,23 +272,23 @@ export default function Starfield() {
     function initBranches() {
       branches = [];
       fallingLeaves = [];
-      if (!isNature) return;
+      if (!isNature || hasStarted) return;
       const w = canvas!.width;
       const h = canvas!.height;
-      // Trees from bottom edges and corners
-      const positions = [
-        { x: w * 0.03, angle: -Math.PI / 2 + 0.18 },
-        { x: w * 0.15, angle: -Math.PI / 2 + 0.08 },
-        { x: w * 0.35, angle: -Math.PI / 2 + 0.04 },
-        { x: w * 0.65, angle: -Math.PI / 2 - 0.04 },
-        { x: w * 0.85, angle: -Math.PI / 2 - 0.1 },
-        { x: w * 0.97, angle: -Math.PI / 2 - 0.18 },
-      ];
-      for (const pos of positions) {
+      // Trees from bottom — randomized positions, stay in left 25% and right 25%
+      const treeCount = 4 + Math.floor(Math.random() * 3); // 4-6 trees
+      for (let i = 0; i < treeCount; i++) {
+        const onLeft = Math.random() < 0.5;
+        const x = onLeft
+          ? Math.random() * w * 0.25
+          : w * 0.75 + Math.random() * w * 0.25;
+        const leanAngle = onLeft
+          ? -Math.PI / 2 + Math.random() * 0.25
+          : -Math.PI / 2 - Math.random() * 0.25;
         const trunk = createBranch(
-          pos.x + (Math.random() - 0.5) * 30,
+          x,
           h + 10,
-          pos.angle + (Math.random() - 0.5) * 0.1,
+          leanAngle + (Math.random() - 0.5) * 0.1,
           80 + Math.random() * 60,
           4 + Math.random() * 2.5,
           0
@@ -1057,8 +1058,8 @@ export default function Starfield() {
         }
       }
 
-      // Nature theme: branches, falling leaves, animals & butterflies
-      if (isNature) {
+      // Nature theme: branches, falling leaves, animals & butterflies (home only)
+      if (isNature && !hasStarted) {
         // Draw growing branches with attached leaves
         for (const branch of branches) {
           drawBranch(branch, 0);
@@ -1111,7 +1112,7 @@ export default function Starfield() {
       window.removeEventListener("resize", resize);
       cancelAnimationFrame(animationId);
     };
-  }, [theme]);
+  }, [theme, hasStarted]);
 
   return (
     <canvas
