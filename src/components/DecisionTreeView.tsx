@@ -252,12 +252,6 @@ export default function DecisionTreeView() {
         >
           Values Mirror
         </button>
-        <button
-          onClick={() => useStore.getState().reset()}
-          className="px-3 py-1.5 text-xs rounded-lg border bg-cosmos-surface border-cosmos-border text-cosmos-muted hover:border-cosmos-conflict/30 hover:text-cosmos-conflict transition-all"
-        >
-          New Goal
-        </button>
       </div>
     </div>
   );
