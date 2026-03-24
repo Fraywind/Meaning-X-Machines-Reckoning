@@ -28,7 +28,7 @@ interface ShootingStar {
   color: [number, number, number];
 }
 
-interface CuteFloater {
+interface Floater {
   x: number;
   y: number;
   emoji: string;
@@ -63,15 +63,44 @@ export default function Starfield() {
     let animationId: number;
     let stars: Star[] = [];
     let shootingStars: ShootingStar[] = [];
-    let cuteFloaters: CuteFloater[] = [];
+    let floaters: Floater[] = [];
     let time = 0;
     const isStarfield = theme === "starfield";
+
+    // Cute emojis (no animals except butterflies)
     const cuteEmojis = ["\uD83D\uDC3B", "\uD83D\uDC30", "\uD83C\uDF1F", "\uD83C\uDF38", "\uD83C\uDF6D", "\uD83E\uDDE1", "\uD83C\uDF80", "\uD83D\uDC31", "\uD83C\uDF3C", "\uD83E\uDD8B", "\u2B50", "\uD83C\uDF40", "\uD83D\uDC3E", "\uD83C\uDF37"];
+
+    // Nature emojis: trees (varied), butterflies, leaves — no animals
+    const natureTrees = ["\uD83C\uDF32", "\uD83C\uDF33", "\uD83C\uDF34", "\uD83C\uDF35", "\uD83C\uDFD4\uFE0F"];
+    const natureButterflies = ["\uD83E\uDD8B"];
+    const natureLeaves = ["\uD83C\uDF42", "\uD83C\uDF43", "\uD83C\uDF41", "\uD83C\uDF3F", "\uD83C\uDF40"];
+    // Pick a random set of 2-4 tree types for this session
+    const sessionTreeCount = 2 + Math.floor(Math.random() * 3); // 2-4 trees
+    const shuffledTrees = [...natureTrees].sort(() => Math.random() - 0.5);
+    const sessionTrees = shuffledTrees.slice(0, sessionTreeCount);
 
     function resize() {
       canvas!.width = window.innerWidth;
       canvas!.height = window.innerHeight;
       initStars();
+      if (isNature) initNatureTrees();
+    }
+
+    // Place static trees at the bottom on init (different each load)
+    let staticTrees: { x: number; emoji: string; size: number; sway: number; swayPhase: number }[] = [];
+
+    function initNatureTrees() {
+      staticTrees = [];
+      const treeCount = 4 + Math.floor(Math.random() * 4); // 4-7 trees
+      for (let i = 0; i < treeCount; i++) {
+        staticTrees.push({
+          x: (canvas!.width * (i + 0.3 + Math.random() * 0.4)) / treeCount,
+          emoji: sessionTrees[Math.floor(Math.random() * sessionTrees.length)],
+          size: 32 + Math.random() * 28, // 32-60px
+          sway: 0.3 + Math.random() * 0.5,
+          swayPhase: Math.random() * Math.PI * 2,
+        });
+      }
     }
 
     function initStars() {
@@ -141,7 +170,6 @@ export default function Starfield() {
         // Star core
         ctx!.beginPath();
         if (isCybernetics) {
-          // Square pixels for cybernetics theme
           ctx!.rect(
             star.x - star.size / 2,
             star.y - star.size / 2,
@@ -156,11 +184,9 @@ export default function Starfield() {
 
         // Movement
         if (isCybernetics) {
-          // Data rain: mostly downward, slight horizontal jitter
           star.y += star.speed * 0.08 * themeSpeed * 3;
           star.x += (Math.random() - 0.5) * 0.1;
         } else if (isCute) {
-          // Gentle float upward with wobbly sine drift
           star.y -= star.speed * 0.04 * themeSpeed;
           star.x += Math.sin(time * 0.002 + star.twinklePhase) * 0.15;
         } else if (isNature) {
@@ -173,16 +199,12 @@ export default function Starfield() {
             star.driftAngle += Math.sin(time * 0.0003 + star.twinklePhase) * 0.003;
           }
         } else if (isStarfield) {
-          // Lively drift: each star floats in its own direction with gentle wandering
           const driftX = Math.cos(star.driftAngle) * star.speed * 0.3 * themeSpeed;
           const driftY = Math.sin(star.driftAngle) * star.speed * 0.3 * themeSpeed;
-          // Add a slow sine weave on top
           star.x += driftX + Math.sin(time * 0.003 + star.twinklePhase) * 0.12;
           star.y += driftY + Math.cos(time * 0.002 + star.twinklePhase * 1.3) * 0.08;
-          // Slowly rotate drift angle for organic wandering
           star.driftAngle += (Math.sin(time * 0.0005 + star.twinklePhase) * 0.002);
         } else {
-          // Light/default: slow drift
           star.y += star.speed * 0.08 * themeSpeed;
           star.x += Math.sin(time * 0.001 + star.twinklePhase) * 0.02;
         }
@@ -202,9 +224,8 @@ export default function Starfield() {
 
       // Starfield: shooting stars
       if (isStarfield) {
-        // Spawn occasionally
         if (Math.random() < 0.008) {
-          const angle = Math.PI * 0.15 + Math.random() * Math.PI * 0.2; // mostly diagonal
+          const angle = Math.PI * 0.15 + Math.random() * Math.PI * 0.2;
           const spd = 4 + Math.random() * 6;
           shootingStars.push({
             x: Math.random() * canvas!.width * 0.8,
@@ -218,7 +239,6 @@ export default function Starfield() {
           });
         }
 
-        // Draw and update shooting stars
         for (let i = shootingStars.length - 1; i >= 0; i--) {
           const ss = shootingStars[i];
           ss.life++;
@@ -229,7 +249,6 @@ export default function Starfield() {
           const alpha = progress < 0.3 ? progress / 0.3 : 1 - (progress - 0.3) / 0.7;
           const [sr, sg, sb] = ss.color;
 
-          // Trail
           const tailLen = 6;
           for (let t = 0; t < tailLen; t++) {
             const tAlpha = alpha * (1 - t / tailLen) * 0.5;
@@ -239,7 +258,6 @@ export default function Starfield() {
             ctx!.fill();
           }
 
-          // Head glow
           const grd = ctx!.createRadialGradient(ss.x, ss.y, 0, ss.x, ss.y, ss.size * 4);
           grd.addColorStop(0, `rgba(${sr}, ${sg}, ${sb}, ${alpha * 0.6})`);
           grd.addColorStop(1, `rgba(${sr}, ${sg}, ${sb}, 0)`);
@@ -252,18 +270,17 @@ export default function Starfield() {
         }
       }
 
-      // Cybernetics: occasional scan lines
+      // Cybernetics: scan lines
       if (isCybernetics) {
         const scanY = (time * 1.5) % canvas!.height;
         ctx!.fillStyle = `rgba(0, 232, 123, 0.015)`;
         ctx!.fillRect(0, scanY, canvas!.width, 2);
       }
 
-      // Cute theme: occasional plushie floaters
+      // Cute theme: emoji floaters
       if (isCute) {
-        // Spawn frequently, anywhere on screen
         if (Math.random() < 0.02) {
-          cuteFloaters.push({
+          floaters.push({
             x: Math.random() * canvas!.width,
             y: Math.random() * canvas!.height,
             emoji: cuteEmojis[Math.floor(Math.random() * cuteEmojis.length)],
@@ -278,17 +295,13 @@ export default function Starfield() {
           });
         }
 
-        for (let i = cuteFloaters.length - 1; i >= 0; i--) {
-          const f = cuteFloaters[i];
+        for (let i = floaters.length - 1; i >= 0; i--) {
+          const f = floaters[i];
           f.life++;
-
-          // Float upward
           f.y -= f.floatSpeed;
-          // Gentle side-to-side wobble
           f.x += Math.sin(f.life * f.wobbleSpeed + f.wobblePhase) * 0.8;
           f.rotation += f.rotationSpeed;
 
-          // Fade in / hold / fade out
           const progress = f.life / f.maxLife;
           let alpha: number;
           if (progress < 0.15) {
@@ -298,7 +311,6 @@ export default function Starfield() {
           } else {
             alpha = 1;
           }
-          // Visible but not overwhelming
           alpha *= 0.65;
 
           ctx!.save();
@@ -312,7 +324,104 @@ export default function Starfield() {
           ctx!.restore();
           ctx!.globalAlpha = 1;
 
-          if (f.life >= f.maxLife) cuteFloaters.splice(i, 1);
+          if (f.life >= f.maxLife) floaters.splice(i, 1);
+        }
+      }
+
+      // Nature theme: static trees at bottom + floating butterflies + falling leaves
+      if (isNature) {
+        // Draw static trees at the bottom with gentle sway
+        for (const tree of staticTrees) {
+          const swayOffset = Math.sin(time * 0.008 * tree.sway + tree.swayPhase) * 2;
+          ctx!.save();
+          ctx!.globalAlpha = 0.35;
+          ctx!.font = `${tree.size}px serif`;
+          ctx!.textAlign = "center";
+          ctx!.textBaseline = "bottom";
+          ctx!.fillText(tree.emoji, tree.x + swayOffset, canvas!.height + 4);
+          ctx!.restore();
+          ctx!.globalAlpha = 1;
+        }
+
+        // Spawn butterflies (slightly more frequent)
+        if (Math.random() < 0.012) {
+          floaters.push({
+            x: Math.random() * canvas!.width,
+            y: canvas!.height * 0.3 + Math.random() * canvas!.height * 0.5,
+            emoji: natureButterflies[Math.floor(Math.random() * natureButterflies.length)],
+            size: 16 + Math.random() * 12,
+            life: 0,
+            maxLife: 300 + Math.random() * 250,
+            wobblePhase: Math.random() * Math.PI * 2,
+            wobbleSpeed: 0.04 + Math.random() * 0.03,
+            floatSpeed: 0.08 + Math.random() * 0.12,
+            rotation: 0,
+            rotationSpeed: (Math.random() - 0.5) * 0.02,
+          });
+        }
+
+        // Spawn falling leaves (frequent, gentle)
+        if (Math.random() < 0.025) {
+          floaters.push({
+            x: Math.random() * canvas!.width,
+            y: -20,
+            emoji: natureLeaves[Math.floor(Math.random() * natureLeaves.length)],
+            size: 14 + Math.random() * 10,
+            life: 0,
+            maxLife: 400 + Math.random() * 300,
+            wobblePhase: Math.random() * Math.PI * 2,
+            wobbleSpeed: 0.015 + Math.random() * 0.02,
+            floatSpeed: 0.3 + Math.random() * 0.4, // falling speed
+            rotation: 0,
+            rotationSpeed: (Math.random() - 0.5) * 0.025,
+          });
+        }
+
+        // Draw and update nature floaters
+        for (let i = floaters.length - 1; i >= 0; i--) {
+          const f = floaters[i];
+          f.life++;
+
+          // Butterflies flutter around; leaves fall down
+          const isLeaf = f.emoji !== "\uD83E\uDD8B";
+          if (isLeaf) {
+            // Leaves fall with side-to-side sway
+            f.y += f.floatSpeed;
+            f.x += Math.sin(f.life * f.wobbleSpeed + f.wobblePhase) * 1.2;
+          } else {
+            // Butterflies flutter upward with erratic path
+            f.y -= f.floatSpeed * 0.5;
+            f.x += Math.sin(f.life * f.wobbleSpeed + f.wobblePhase) * 1.5;
+            f.y += Math.cos(f.life * f.wobbleSpeed * 0.7 + f.wobblePhase) * 0.8;
+          }
+          f.rotation += f.rotationSpeed;
+
+          const progress = f.life / f.maxLife;
+          let alpha: number;
+          if (progress < 0.1) {
+            alpha = progress / 0.1;
+          } else if (progress > 0.75) {
+            alpha = 1 - (progress - 0.75) / 0.25;
+          } else {
+            alpha = 1;
+          }
+          alpha *= isLeaf ? 0.5 : 0.6;
+
+          ctx!.save();
+          ctx!.translate(f.x, f.y);
+          ctx!.rotate(f.rotation);
+          ctx!.globalAlpha = alpha;
+          ctx!.font = `${f.size}px serif`;
+          ctx!.textAlign = "center";
+          ctx!.textBaseline = "middle";
+          ctx!.fillText(f.emoji, 0, 0);
+          ctx!.restore();
+          ctx!.globalAlpha = 1;
+
+          // Remove when off screen or expired
+          if (f.life >= f.maxLife || f.y > canvas!.height + 30 || f.y < -50) {
+            floaters.splice(i, 1);
+          }
         }
       }
 
