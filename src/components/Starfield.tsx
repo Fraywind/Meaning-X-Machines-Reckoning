@@ -276,10 +276,12 @@ export default function Starfield() {
       const h = canvas!.height;
       // Trees from bottom edges and corners
       const positions = [
-        { x: w * 0.05, angle: -Math.PI / 2 + 0.15 },
-        { x: w * 0.18, angle: -Math.PI / 2 + 0.08 },
-        { x: w * 0.82, angle: -Math.PI / 2 - 0.1 },
-        { x: w * 0.95, angle: -Math.PI / 2 - 0.15 },
+        { x: w * 0.03, angle: -Math.PI / 2 + 0.18 },
+        { x: w * 0.15, angle: -Math.PI / 2 + 0.08 },
+        { x: w * 0.35, angle: -Math.PI / 2 + 0.04 },
+        { x: w * 0.65, angle: -Math.PI / 2 - 0.04 },
+        { x: w * 0.85, angle: -Math.PI / 2 - 0.1 },
+        { x: w * 0.97, angle: -Math.PI / 2 - 0.18 },
       ];
       for (const pos of positions) {
         const trunk = createBranch(
@@ -293,7 +295,7 @@ export default function Starfield() {
         branches.push(trunk);
       }
       // Side branches reaching in from edges
-      for (let i = 0; i < 4; i++) {
+      for (let i = 0; i < 6; i++) {
         const fromLeft = i % 2 === 0;
         const x = fromLeft ? -10 : w + 10;
         const y = h * 0.15 + Math.random() * h * 0.55;
@@ -1087,7 +1089,7 @@ export default function Starfield() {
           drawHangingAnimals();
 
           // Spawn butterflies gradually
-          if (butterflies.length < 5 && Math.random() < 0.008) {
+          if (butterflies.length < 8 && Math.random() < 0.012) {
             spawnButterfly();
           }
 

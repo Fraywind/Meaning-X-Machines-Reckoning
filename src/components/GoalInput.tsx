@@ -599,25 +599,23 @@ export default function GoalInput() {
             </div>
           </motion.div>
 
-          {/* Previous sessions */}
+          {/* Previous sessions — compact */}
           {savedSessions.length > 0 && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.9, duration: 0.8 }}
-              className="mt-8"
+              className="mt-4"
             >
-              <div className="text-[10px] uppercase tracking-wider text-cosmos-muted/40 text-center mb-3">
-                Resume a previous deliberation
-              </div>
-              <div className="flex flex-wrap gap-2 justify-center">
+              <div className="flex flex-wrap items-center justify-center gap-1.5">
+                <span className="text-[10px] text-cosmos-muted/30 mr-1">Resume:</span>
                 {savedSessions.slice(0, 3).map((session) => (
                   <button
                     key={session.id}
                     onClick={() => loadSession(session.id)}
-                    className="flex items-center gap-2 px-4 py-2.5 text-xs text-cosmos-muted border border-cosmos-border/40 rounded-xl hover:border-cosmos-glow/30 hover:text-cosmos-glow hover:bg-cosmos-glow/5 transition-all max-w-[280px]"
+                    className="flex items-center gap-1 px-2.5 py-1 text-[11px] text-cosmos-muted/50 border border-cosmos-border/30 rounded-lg hover:border-cosmos-glow/20 hover:text-cosmos-muted transition-all max-w-[200px]"
                   >
-                    <Clock className="w-3 h-3 shrink-0" />
+                    <Clock className="w-2.5 h-2.5 shrink-0" />
                     <span className="truncate">{session.goalText}</span>
                   </button>
                 ))}
