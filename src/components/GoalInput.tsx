@@ -15,6 +15,8 @@ import {
   Clock,
   ChevronDown,
   BookOpen,
+  Download,
+  Upload,
 } from "lucide-react";
 import { useStore, SavedSession } from "@/store/useStore";
 import { safeFetch } from "@/lib/api";
@@ -51,6 +53,7 @@ export default function GoalInput() {
     }
   };
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const sessionFileRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
 
   const toggleRecording = useCallback(() => {
@@ -113,6 +116,45 @@ export default function GoalInput() {
   useEffect(() => {
     loadSessionsFromStorage();
   }, [loadSessionsFromStorage]);
+
+  const handleExportSessions = () => {
+    const sessions = savedSessions;
+    if (sessions.length === 0) return;
+    const blob = new Blob([JSON.stringify(sessions, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `cascade-sessions-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportSession = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const data = JSON.parse(ev.target?.result as string);
+        const sessions: SavedSession[] = Array.isArray(data) ? data : [data];
+        // Merge into localStorage
+        const existing = savedSessions;
+        const merged = [...sessions.filter((s) => !existing.find((e) => e.id === s.id)), ...existing].slice(0, 10);
+        try {
+          localStorage.setItem("reckoning-sessions", JSON.stringify(merged));
+        } catch {}
+        loadSessionsFromStorage();
+        // If single session, load it directly
+        if (sessions.length === 1) {
+          loadSession(sessions[0].id);
+        }
+      } catch {
+        alert("Could not read this file. Make sure it is a Cascade session file.");
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -340,7 +382,7 @@ export default function GoalInput() {
                         Cascade is a thinking tool. You describe a complex goal, and the AI breaks it down
                         into a map of sub-decisions, consequences, and paths you might not have seen coming.
                         In any complex goal, there will inevitably be moments where a decision comes down to
-                        tradeoffs and preferences &mdash; choices that have a cascading effect on everything
+                        tradeoffs and preferences, choices that have a cascading effect on everything
                         downstream. When the AI reaches one of those moments, <span className="text-cosmos-text">it
                         detects it, surfaces the conflict and tradeoffs, and brings it to you.</span> You
                         make the judgment call as the human. Your intent drives what happens next.
@@ -354,8 +396,8 @@ export default function GoalInput() {
                       </h3>
                       <ol className="space-y-1.5 text-cosmos-muted list-decimal list-inside">
                         <li><span className="text-cosmos-text/80">Describe your goal</span> and a bit about who you are</li>
-                        <li>The AI expands it into a decision tree &mdash; you&apos;ll see nodes branch out</li>
-                        <li><span className="text-cosmos-judgment">Yellow nodes</span> are judgment points &mdash; click <span className="text-cosmos-text/80">&ldquo;Decide now&rdquo;</span> to weigh in</li>
+                        <li>The AI expands it into a decision tree, and you&apos;ll see nodes branch out</li>
+                        <li><span className="text-cosmos-judgment">Yellow nodes</span> are judgment points, click <span className="text-cosmos-text/80">&ldquo;Decide now&rdquo;</span> to weigh in</li>
                         <li>Choose an option, or clarify if none fit your situation</li>
                         <li>Your choices ripple forward, revealing new branches and sometimes new conflicts</li>
                         <li>Open the <span className="text-cosmos-text/80">Values Mirror</span> to see what your decisions reveal about what matters to you</li>
@@ -587,31 +629,49 @@ export default function GoalInput() {
             </div>
           </motion.div>
 
-          {/* Previous sessions */}
-          {savedSessions.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.9, duration: 0.8 }}
-              className="mt-8"
+          {/* Previous sessions + save/load */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.9, duration: 0.6 }}
+            className="mt-6 flex flex-wrap gap-1.5 justify-center items-center"
+          >
+            {savedSessions.slice(0, 3).map((session) => (
+              <button
+                key={session.id}
+                onClick={() => loadSession(session.id)}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] text-cosmos-muted/50 border border-cosmos-border/30 rounded-lg hover:border-cosmos-glow/20 hover:text-cosmos-glow transition-all max-w-[220px]"
+              >
+                <Clock className="w-2.5 h-2.5 shrink-0" />
+                <span className="truncate">{session.goalText}</span>
+              </button>
+            ))}
+            {savedSessions.length > 0 && (
+              <button
+                onClick={handleExportSessions}
+                className="flex items-center gap-1 px-2.5 py-1.5 text-[10px] text-cosmos-muted/35 border border-cosmos-border/20 rounded-lg hover:border-cosmos-glow/20 hover:text-cosmos-glow transition-all"
+                title="Download your sessions as a file"
+              >
+                <Download className="w-2.5 h-2.5" />
+                Save
+              </button>
+            )}
+            <button
+              onClick={() => sessionFileRef.current?.click()}
+              className="flex items-center gap-1 px-2.5 py-1.5 text-[10px] text-cosmos-muted/35 border border-cosmos-border/20 rounded-lg hover:border-cosmos-glow/20 hover:text-cosmos-glow transition-all"
+              title="Load a session file"
             >
-              <div className="text-[10px] uppercase tracking-wider text-cosmos-muted/40 text-center mb-3">
-                Resume a previous deliberation
-              </div>
-              <div className="flex flex-wrap gap-2 justify-center">
-                {savedSessions.slice(0, 3).map((session) => (
-                  <button
-                    key={session.id}
-                    onClick={() => loadSession(session.id)}
-                    className="flex items-center gap-2 px-4 py-2.5 text-xs text-cosmos-muted border border-cosmos-border/40 rounded-xl hover:border-cosmos-glow/30 hover:text-cosmos-glow hover:bg-cosmos-glow/5 transition-all max-w-[280px]"
-                  >
-                    <Clock className="w-3 h-3 shrink-0" />
-                    <span className="truncate">{session.goalText}</span>
-                  </button>
-                ))}
-              </div>
-            </motion.div>
-          )}
+              <Upload className="w-2.5 h-2.5" />
+              Load
+            </button>
+            <input
+              ref={sessionFileRef}
+              type="file"
+              accept=".json"
+              onChange={handleImportSession}
+              className="hidden"
+            />
+          </motion.div>
 
           {/* Footer disclaimer */}
           <motion.div

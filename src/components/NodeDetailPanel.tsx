@@ -209,7 +209,7 @@ export default function NodeDetailPanel({ node }: Props) {
           {node.type === "reckoning" && (
             <div className="mb-5 p-3 bg-cosmos-reckoning/5 border border-cosmos-reckoning/15 rounded-lg">
               <p className="text-xs text-cosmos-muted">
-                This is a <span className="text-cosmos-reckoning font-medium">reckoning node</span> &mdash;
+                This is a <span className="text-cosmos-reckoning font-medium">reckoning node</span>,
                 the AI determined this step based on logic and facts. No value judgment was needed here.
               </p>
             </div>

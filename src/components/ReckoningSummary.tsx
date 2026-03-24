@@ -460,7 +460,7 @@ export default function ReckoningSummary() {
               &ldquo;The AI does the reckoning. You do the judging.&rdquo;
             </p>
             <p className="text-[10px] text-cosmos-muted/30 mt-1">
-              &mdash; Inspired by Brian Cantwell Smith
+              Inspired by Brian Cantwell Smith
             </p>
           </div>
         </div>

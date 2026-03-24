@@ -58,7 +58,7 @@ function ValueCard({ value }: { value: UserValue }) {
           <Info className="w-3 h-3" />
           <span>
             Revealed by {value.sourceNodeIds.length} decision
-            {value.sourceNodeIds.length !== 1 ? "s" : ""} &mdash; tap for details
+            {value.sourceNodeIds.length !== 1 ? "s" : ""}, tap for details
           </span>
         </div>
       </button>
