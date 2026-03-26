@@ -276,26 +276,42 @@ export default function GoalInput() {
             </div>
           </motion.div>
 
-          {/* About dropdowns — two separate sections */}
+          {/* About dropdowns — two tabs side by side */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.5, duration: 0.6 }}
-            className="mb-6 space-y-2"
+            className="mb-6"
           >
-            {/* Dropdown 1: What is Cascade + How to use */}
-            <div>
+            <div className="flex items-center justify-center gap-2">
               <button
                 onClick={() => { setShowWhat(!showWhat); setShowWhy(false); }}
-                className="mx-auto flex items-center gap-2 px-4 py-2 text-xs text-cosmos-text/70 hover:text-cosmos-glow border border-cosmos-glow/25 hover:border-cosmos-glow/40 rounded-xl transition-all shadow-[0_0_8px_rgba(var(--glow),0.08)]"
+                className={`flex items-center gap-1.5 px-4 py-2 text-xs rounded-xl border transition-all ${
+                  showWhat
+                    ? "text-cosmos-glow border-cosmos-glow/40 bg-cosmos-glow/10"
+                    : "text-cosmos-text/70 hover:text-cosmos-glow border-cosmos-glow/25 hover:border-cosmos-glow/40"
+                } shadow-[0_0_8px_rgba(var(--glow),0.08)]`}
               >
                 <BookOpen className="w-3.5 h-3.5" />
-                What is Cascade &amp; how to use it
+                What is Cascade?
                 <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${showWhat ? "rotate-180" : ""}`} />
               </button>
+              <button
+                onClick={() => { setShowWhy(!showWhy); setShowWhat(false); }}
+                className={`flex items-center gap-1.5 px-4 py-2 text-xs rounded-xl border transition-all ${
+                  showWhy
+                    ? "text-cosmos-glow border-cosmos-glow/40 bg-cosmos-glow/10"
+                    : "text-cosmos-muted/60 hover:text-cosmos-glow border-cosmos-border/20 hover:border-cosmos-glow/30"
+                }`}
+              >
+                Why it Matters
+                <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${showWhy ? "rotate-180" : ""}`} />
+              </button>
+            </div>
 
-              <AnimatePresence>
-                {showWhat && (
+            {/* Dropdown 1: What is Cascade + How to use */}
+            <AnimatePresence>
+              {showWhat && (
                   <motion.div
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: "auto", opacity: 1 }}
@@ -340,21 +356,11 @@ export default function GoalInput() {
                     </div>
                   </motion.div>
                 )}
-              </AnimatePresence>
-            </div>
+            </AnimatePresence>
 
             {/* Dropdown 2: Why it matters + citations */}
-            <div>
-              <button
-                onClick={() => { setShowWhy(!showWhy); setShowWhat(false); }}
-                className="mx-auto flex items-center gap-2 px-4 py-2 text-xs text-cosmos-muted/60 hover:text-cosmos-glow border border-cosmos-border/20 hover:border-cosmos-glow/30 rounded-xl transition-all"
-              >
-                Why it matters: Reckoning vs. Judgment
-                <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${showWhy ? "rotate-180" : ""}`} />
-              </button>
-
-              <AnimatePresence>
-                {showWhy && (
+            <AnimatePresence>
+              {showWhy && (
                   <motion.div
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: "auto", opacity: 1 }}
@@ -421,8 +427,7 @@ export default function GoalInput() {
                     </div>
                   </motion.div>
                 )}
-              </AnimatePresence>
-            </div>
+            </AnimatePresence>
           </motion.div>
 
           {/* Mode picker */}
