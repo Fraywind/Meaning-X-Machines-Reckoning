@@ -523,7 +523,16 @@ export default function NotebookView() {
         {/* Top bar */}
         <div className="sticky top-0 z-40 bg-cosmos-bg/90 backdrop-blur-md border-b border-cosmos-border/30 px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <h1 className="text-sm font-display font-bold text-cosmos-text">Cascade</h1>
+            <span className="text-[10px] text-cosmos-muted/50 uppercase tracking-wider">Format</span>
+            <select
+              value="notebook"
+              onChange={(e) => useStore.getState().setViewMode(e.target.value as "tree" | "notebook" | "chat")}
+              className="bg-cosmos-surface/80 border border-cosmos-border rounded-lg px-2.5 py-1.5 text-xs text-cosmos-text focus:outline-none focus:border-cosmos-glow/50 cursor-pointer"
+            >
+              <option value="tree">Tree</option>
+              <option value="notebook">Notebook</option>
+              <option value="chat">Dialogue</option>
+            </select>
             <div className="flex items-center gap-3 text-[10px] text-cosmos-muted/50">
               <span>{stats.total} nodes</span>
               <span className="text-cosmos-resolved">{stats.resolved} decided</span>
@@ -543,18 +552,6 @@ export default function NotebookView() {
               }`}
             >
               Values
-            </button>
-            <button
-              onClick={() => useStore.getState().setViewMode("tree")}
-              className="px-3 py-1.5 text-xs rounded-lg border bg-cosmos-surface border-cosmos-border text-cosmos-muted hover:border-cosmos-glow/30 transition-all"
-            >
-              Tree View
-            </button>
-            <button
-              onClick={reset}
-              className="px-3 py-1.5 text-xs rounded-lg border bg-cosmos-surface border-cosmos-border text-cosmos-muted hover:border-cosmos-conflict/30 hover:text-cosmos-conflict transition-all"
-            >
-              New Goal
             </button>
           </div>
         </div>

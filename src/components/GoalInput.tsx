@@ -24,7 +24,8 @@ import ThemeSwitcher from "./ThemeSwitcher";
 
 export default function GoalInput() {
   const [text, setText] = useState("");
-  const [showAbout, setShowAbout] = useState(false);
+  const [showWhat, setShowWhat] = useState(false);
+  const [showWhy, setShowWhy] = useState(false);
   const [attachments, setAttachments] = useState<{ name: string; content: string }[]>([]);
   const [isRecording, setIsRecording] = useState(false);
   const [showValues, setShowValues] = useState(false);
@@ -218,20 +219,6 @@ export default function GoalInput() {
         </motion.div>
       </div>
 
-      {/* T561 label — left side */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 1, duration: 1 }}
-        className="fixed left-6 top-1/2 -translate-y-1/2 z-20"
-      >
-        <div className="text-xs tracking-[0.3em] text-cosmos-text font-display uppercase select-none"
-          style={{ writingMode: "vertical-rl", textOrientation: "mixed" }}
-        >
-          A Meaning &times; Machines Project
-        </div>
-      </motion.div>
-
       <motion.div
         className="relative z-10 flex items-center justify-center min-h-screen"
         initial={{ opacity: 0 }}
@@ -289,74 +276,93 @@ export default function GoalInput() {
             </div>
           </motion.div>
 
-          {/* About / How it works tab */}
+          {/* About dropdowns — two separate sections */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.5, duration: 0.6 }}
-            className="mb-6"
+            className="mb-6 space-y-2"
           >
-            <button
-              onClick={() => setShowAbout(!showAbout)}
-              className="mx-auto flex items-center gap-2 px-4 py-2 text-xs text-cosmos-text/70 hover:text-cosmos-glow border border-cosmos-glow/25 hover:border-cosmos-glow/40 rounded-xl transition-all shadow-[0_0_8px_rgba(var(--glow),0.08)]"
-            >
-              <BookOpen className="w-3.5 h-3.5" />
-              What is this &amp; how does it work?
-              <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${showAbout ? "rotate-180" : ""}`} />
-            </button>
+            {/* Dropdown 1: What is Cascade + How to use */}
+            <div>
+              <button
+                onClick={() => { setShowWhat(!showWhat); setShowWhy(false); }}
+                className="mx-auto flex items-center gap-2 px-4 py-2 text-xs text-cosmos-text/70 hover:text-cosmos-glow border border-cosmos-glow/25 hover:border-cosmos-glow/40 rounded-xl transition-all shadow-[0_0_8px_rgba(var(--glow),0.08)]"
+              >
+                <BookOpen className="w-3.5 h-3.5" />
+                What is Cascade &amp; how to use it
+                <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${showWhat ? "rotate-180" : ""}`} />
+              </button>
 
-            <AnimatePresence>
-              {showAbout && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.3 }}
-                  className="overflow-hidden"
-                >
-                  <div className="mt-4 p-5 bg-cosmos-surface/60 backdrop-blur-sm border border-cosmos-border/40 rounded-2xl text-sm text-cosmos-muted leading-relaxed space-y-4 max-w-xl mx-auto">
-                    {/* What it is */}
-                    <div>
-                      <h3 className="text-cosmos-text font-medium text-xs uppercase tracking-wider mb-1.5">
-                        What is Cascade?
-                      </h3>
-                      <p>
-                        Cascade is a thinking and planning tool. You describe a complex goal or task, and the AI breaks it down
-                        into a map of sub-decisions, consequences, and paths you might not have seen coming.
-                        Complex tasks are full of nuances and details that are easy to overlook or not even realize
-                        are there. Typically, AI just assumes or skips over these, and those silent assumptions can
-                        have real consequences downstream. In any complex goal or task, there will inevitably be
-                        moments where a decision comes down to tradeoffs and preferences &mdash; choices that have
-                        a cascading effect on everything that follows. When the AI reaches one of those moments,
-                        <span className="text-cosmos-text"> it detects it, surfaces the conflict and tradeoffs,
-                        and brings it to you.</span> You make the judgment call as the human. Your intent drives
-                        what happens next.
-                      </p>
+              <AnimatePresence>
+                {showWhat && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="mt-3 p-5 bg-cosmos-surface/60 backdrop-blur-sm border border-cosmos-border/40 rounded-2xl text-sm text-cosmos-muted leading-relaxed space-y-4 max-w-xl mx-auto">
+                      <div>
+                        <h3 className="text-cosmos-text font-medium text-xs uppercase tracking-wider mb-1.5">
+                          What is Cascade?
+                        </h3>
+                        <p>
+                          Cascade is a thinking and planning tool. You describe a complex goal or task, and the AI breaks it down
+                          into a map of sub-decisions, consequences, and paths you might not have seen coming.
+                          Complex tasks are full of nuances and details that are easy to overlook or not even realize
+                          are there. Typically, AI just assumes or skips over these, and those silent assumptions can
+                          have real consequences downstream. In any complex goal or task, there will inevitably be
+                          moments where a decision comes down to tradeoffs and preferences &mdash; choices that have
+                          a cascading effect on everything that follows. When the AI reaches one of those moments,
+                          <span className="text-cosmos-text"> it detects it, surfaces the conflict and tradeoffs,
+                          and brings it to you.</span> You make the judgment call as the human. Your intent drives
+                          what happens next.
+                        </p>
+                      </div>
+
+                      <div>
+                        <h3 className="text-cosmos-text font-medium text-xs uppercase tracking-wider mb-1.5">
+                          How to use it
+                        </h3>
+                        <ol className="space-y-2.5 text-cosmos-muted list-decimal list-inside">
+                          <li><span className="text-cosmos-text/80">Describe your goal or task</span> with as much detail and context as you can. The more specific you are about your situation, constraints, and who you are, the better the output.</li>
+                          <li>The AI breaks down your complex goal or task into a decision tree of sub-decisions, dependencies, and consequences. Any point that requires a nuanced human call &mdash; something that depends on your values, intent, or priorities &mdash; gets flagged and brought back to you.</li>
+                          <li><span className="text-cosmos-judgment">Highlighted nodes</span> are those judgment points. Click <span className="text-cosmos-text/80">&ldquo;Decide now&rdquo;</span> to see the options, tradeoffs, blind spots, and what&apos;s at stake. You decide which direction to go.</li>
+                          <li>If none of the options fit, you can clarify your situation and redirect the AI. Your choices cascade forward, generating new branches and sometimes surfacing new conflicts.</li>
+                          <li>Once all decisions are resolved, the output is a fully laid-out plan you can reference, document, or export as a prompt to build through your preferred AI tool.</li>
+                        </ol>
+                        <p className="mt-3 text-cosmos-muted/60 text-xs italic">
+                          Tip: Open the <span className="text-cosmos-text/70">Values Mirror</span> at any point to see what your decisions reveal about your priorities, adjust your stated values, and get explanations for how they connect to your choices.
+                        </p>
+                      </div>
                     </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
 
-                    {/* How to use */}
-                    <div>
-                      <h3 className="text-cosmos-text font-medium text-xs uppercase tracking-wider mb-1.5">
-                        How to use it
-                      </h3>
-                      <ol className="space-y-2.5 text-cosmos-muted list-decimal list-inside">
-                        <li><span className="text-cosmos-text/80">Describe your goal or task</span> with as much detail and context as you can. The more specific you are about your situation, constraints, and who you are, the better the output.</li>
-                        <li>The AI breaks down your complex goal or task into a decision tree of sub-decisions, dependencies, and consequences. Any point that requires a nuanced human call &mdash; something that depends on your values, intent, or priorities &mdash; gets flagged and brought back to you.</li>
-                        <li><span className="text-cosmos-judgment">Yellow nodes</span> are those judgment points. Click <span className="text-cosmos-text/80">&ldquo;Decide now&rdquo;</span> to see the options, tradeoffs, blind spots, and what&apos;s at stake. You decide which direction to go.</li>
-                        <li>If none of the options fit, you can clarify your situation and redirect the AI. Your choices cascade forward, generating new branches and sometimes surfacing new conflicts.</li>
-                        <li>Once all decisions are resolved, the output is a fully laid-out plan you can reference, document, or export as a prompt to build through your preferred AI tool.</li>
-                      </ol>
-                      <p className="mt-3 text-cosmos-muted/60 text-xs italic">
-                        Tip: Open the <span className="text-cosmos-text/70">Values Mirror</span> at any point to see what your decisions reveal about your priorities, adjust your stated values, and get explanations for how they connect to your choices.
-                      </p>
-                    </div>
+            {/* Dropdown 2: Why it matters + citations */}
+            <div>
+              <button
+                onClick={() => { setShowWhy(!showWhy); setShowWhat(false); }}
+                className="mx-auto flex items-center gap-2 px-4 py-2 text-xs text-cosmos-muted/60 hover:text-cosmos-glow border border-cosmos-border/20 hover:border-cosmos-glow/30 rounded-xl transition-all"
+              >
+                Why it matters: Reckoning vs. Judgment
+                <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${showWhy ? "rotate-180" : ""}`} />
+              </button>
 
-                    {/* Why judgment matters */}
-                    <div className="pt-2 border-t border-cosmos-border/30 space-y-3">
-                      <h3 className="text-cosmos-text font-medium text-xs uppercase tracking-wider mb-1.5">
-                        Why It Matters: Reckoning vs. Judgment
-                      </h3>
-
+              <AnimatePresence>
+                {showWhy && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="mt-3 p-5 bg-cosmos-surface/60 backdrop-blur-sm border border-cosmos-border/40 rounded-2xl text-sm text-cosmos-muted leading-relaxed space-y-3 max-w-xl mx-auto">
                       <div>
                         <h4 className="text-cosmos-text/70 text-xs font-medium mb-1">Two kinds of intelligence</h4>
                         <p>
@@ -398,25 +404,25 @@ export default function GoalInput() {
                           what matters, weighs the tradeoffs, and exercises the judgment that carries real consequences.
                         </p>
                       </div>
-                    </div>
 
-                    <div className="text-[11px] text-cosmos-muted/40 pt-3 border-t border-cosmos-border/20 space-y-1.5">
-                      <p className="text-cosmos-muted/50 text-[10px] uppercase tracking-wider">Inspired by</p>
-                      <p>
-                        <a href="https://www.youtube.com/watch?v=8t5Jg7PthFI" target="_blank" rel="noopener noreferrer" className="text-cosmos-glow/60 hover:text-cosmos-glow underline underline-offset-2 transition-colors">Smith, B. C. (2020). <em>Reckoning and Judgement: The Promise of AI.</em></a>
-                      </p>
-                      <p>
-                        Weizenbaum, J. (1976). <em>Computer Power and Human Reason.</em>
-                      </p>
-                      <p className="text-cosmos-muted/50 text-[10px] uppercase tracking-wider pt-2">Recommended read</p>
-                      <p>
-                        <a href="https://www.theatlantic.com/technology/2026/02/words-without-consequence/685974/" target="_blank" rel="noopener noreferrer" className="text-cosmos-glow/60 hover:text-cosmos-glow underline underline-offset-2 transition-colors">Roy, D. (2026). &ldquo;Words Without Consequence.&rdquo; <em>The Atlantic.</em></a>
-                      </p>
+                      <div className="text-[11px] text-cosmos-muted/50 pt-3 border-t border-cosmos-border/20 space-y-1.5">
+                        <p className="text-cosmos-text/50 text-[10px] uppercase tracking-wider font-medium">Inspired by</p>
+                        <p>
+                          <a href="https://www.youtube.com/watch?v=8t5Jg7PthFI" target="_blank" rel="noopener noreferrer" className="text-cosmos-glow/70 hover:text-cosmos-glow underline underline-offset-2 transition-colors">Smith, B. C. (2020). <em>Reckoning and Judgement: The Promise of AI.</em></a>
+                        </p>
+                        <p>
+                          Weizenbaum, J. (1976). <em>Computer Power and Human Reason.</em>
+                        </p>
+                        <p className="text-cosmos-text/50 text-[10px] uppercase tracking-wider font-medium pt-2">Recommended read</p>
+                        <p>
+                          <a href="https://www.theatlantic.com/technology/2026/02/words-without-consequence/685974/" target="_blank" rel="noopener noreferrer" className="text-cosmos-glow/70 hover:text-cosmos-glow underline underline-offset-2 transition-colors">Roy, D. (2026). &ldquo;Words Without Consequence.&rdquo; <em>The Atlantic.</em></a>
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </motion.div>
 
           {/* Mode picker */}
@@ -606,9 +612,9 @@ export default function GoalInput() {
             transition={{ delay: 0.9, duration: 0.8 }}
             className="mt-4 flex items-center justify-center gap-3"
           >
-            <label className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] text-cosmos-muted/50 border border-cosmos-border/30 rounded-lg hover:border-cosmos-glow/20 hover:text-cosmos-muted cursor-pointer transition-all">
+            <label className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] text-cosmos-muted/50 border border-cosmos-border/30 rounded-lg hover:border-cosmos-glow/20 hover:text-cosmos-muted cursor-pointer transition-all" title="Upload a previously saved .json session file to continue where you left off">
               <Clock className="w-3 h-3" />
-              <span>Resume from saved file</span>
+              <span>Upload saved session (.json)</span>
               <input
                 type="file"
                 accept=".json"

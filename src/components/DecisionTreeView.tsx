@@ -26,7 +26,6 @@ import ReckoningSummary from "./ReckoningSummary";
 import ThemeSwitcher from "./ThemeSwitcher";
 import Starfield from "./Starfield";
 import GuidePanel from "./GuidePanel";
-import { BookOpen, MessageSquare } from "lucide-react";
 import { DecisionNode } from "@/types";
 
 const nodeTypes: NodeTypes = {
@@ -256,14 +255,31 @@ export default function DecisionTreeView() {
         </div>
       )}
 
-      {/* Top bar */}
+      {/* Top bar — mode dropdown left, controls right */}
+      <div className="absolute top-4 left-4 z-40 flex items-center gap-2">
+        <span className="text-[10px] text-cosmos-muted/50 uppercase tracking-wider">Format</span>
+        <select
+          value="tree"
+          onChange={(e) => useStore.getState().setViewMode(e.target.value as "tree" | "notebook" | "chat")}
+          className="bg-cosmos-surface/80 border border-cosmos-border rounded-lg px-2.5 py-1.5 text-xs text-cosmos-text focus:outline-none focus:border-cosmos-glow/50 cursor-pointer"
+        >
+          <option value="tree">Tree</option>
+          <option value="notebook">Notebook</option>
+          <option value="chat">Dialogue</option>
+        </select>
+      </div>
       <div className="absolute top-4 right-4 z-40 flex gap-2">
         <ThemeSwitcher />
         <button
-          onClick={() => useStore.getState().saveCurrentSession()}
+          onClick={() => {
+            if (confirm("This will download your session as a JSON file. You can reload it later with \"Resume from file\" on the home screen.\n\nDownload now?")) {
+              useStore.getState().saveCurrentSession();
+            }
+          }}
           className="px-3 py-1.5 text-xs rounded-lg border bg-cosmos-surface border-cosmos-border text-cosmos-muted hover:border-cosmos-resolved/30 hover:text-cosmos-resolved transition-all"
+          title="Download session as a file you can resume later"
         >
-          Save
+          Save to file
         </button>
         <button
           onClick={() => {
@@ -287,18 +303,6 @@ export default function DecisionTreeView() {
           }`}
         >
           Values Mirror
-        </button>
-        <button
-          onClick={() => useStore.getState().setViewMode("notebook")}
-          className="px-3 py-1.5 text-xs rounded-lg border bg-cosmos-surface border-cosmos-border text-cosmos-muted hover:border-cosmos-glow/30 hover:text-cosmos-text transition-all flex items-center gap-1"
-        >
-          <BookOpen className="w-3 h-3" /> Notebook
-        </button>
-        <button
-          onClick={() => useStore.getState().setViewMode("chat")}
-          className="px-3 py-1.5 text-xs rounded-lg border bg-cosmos-surface border-cosmos-border text-cosmos-muted hover:border-cosmos-glow/30 hover:text-cosmos-text transition-all flex items-center gap-1"
-        >
-          <MessageSquare className="w-3 h-3" /> Dialogue
         </button>
       </div>
     </div>

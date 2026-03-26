@@ -462,7 +462,7 @@ export default function ChatView() {
         {/* Top bar */}
         <div className="px-4 py-2.5 border-b border-cosmos-border/30 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
-            {/* Mode dropdown */}
+            <span className="text-[10px] text-cosmos-muted/50 uppercase tracking-wider">Format</span>
             <select
               value="chat"
               onChange={(e) => useStore.getState().setViewMode(e.target.value as "tree" | "notebook" | "chat")}
@@ -483,10 +483,15 @@ export default function ChatView() {
           <div className="flex items-center gap-2">
             <ThemeSwitcher />
             <button
-              onClick={() => useStore.getState().saveCurrentSession()}
+              onClick={() => {
+                if (confirm("This will download your session as a JSON file. You can reload it later with \"Resume from file\" on the home screen.\n\nDownload now?")) {
+                  useStore.getState().saveCurrentSession();
+                }
+              }}
               className="px-2.5 py-1.5 text-xs rounded-lg border bg-cosmos-surface/60 border-cosmos-border text-cosmos-muted hover:border-cosmos-resolved/30 hover:text-cosmos-resolved transition-all"
+              title="Download session as a file you can resume later"
             >
-              Save
+              Save to file
             </button>
             <button
               onClick={() => useStore.getState().toggleValuePanel()}
