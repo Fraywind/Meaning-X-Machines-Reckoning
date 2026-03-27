@@ -201,7 +201,7 @@ function ChatDecisionPrompt({ node }: { node: DecisionNode }) {
           addChatMessage({
             id: `sys-${Date.now()}`,
             role: "system",
-            content: `Your choice opens up ${data.nodes.length} new considerations. ${newJudgments.length} need your judgment.`,
+            content: `That choice opens up some new ground. I've mapped out ${data.nodes.length} new considerations, and ${newJudgments.length} of them will need your input.`,
             timestamp: Date.now(),
             relatedNodeIds: (data.nodes as DecisionNode[]).map((n: DecisionNode) => n.id),
           });
@@ -209,7 +209,7 @@ function ChatDecisionPrompt({ node }: { node: DecisionNode }) {
           addChatMessage({
             id: `sys-${Date.now()}`,
             role: "system",
-            content: `Mapped out ${data.nodes.length} new branches from your decision.`,
+            content: `Got it. I've worked through the implications and added ${data.nodes.length} new branches from that decision.`,
             timestamp: Date.now(),
           });
         }
@@ -259,10 +259,13 @@ function ChatDecisionPrompt({ node }: { node: DecisionNode }) {
       });
       if (data.nodes) {
         addNodes(data.nodes);
+        const clarifyJudgments = (data.nodes as DecisionNode[]).filter((n: DecisionNode) => n.type === "judgment");
         addChatMessage({
           id: `sys-${Date.now()}`,
           role: "system",
-          content: `Got it. I've rethought this part based on your input. ${(data.nodes as DecisionNode[]).length} new nodes added.`,
+          content: clarifyJudgments.length > 0
+            ? `Thanks for the context. I've reworked this section based on what you said. ${clarifyJudgments.length} new decision${clarifyJudgments.length !== 1 ? "s" : ""} came out of it.`
+            : `Understood. I've adjusted the plan based on your input.`,
           timestamp: Date.now(),
         });
       }
@@ -423,17 +426,20 @@ export default function ChatView() {
       });
       if (data.nodes && (data.nodes as DecisionNode[]).length > 0) {
         addNodes(data.nodes);
+        const msgJudgments = (data.nodes as DecisionNode[]).filter((n: DecisionNode) => n.type === "judgment");
         addChatMessage({
           id: `sys-${Date.now()}`,
           role: "system",
-          content: `I've updated the tree based on your input. ${(data.nodes as DecisionNode[]).filter((n: DecisionNode) => n.type === "judgment").length} new decisions surfaced.`,
+          content: msgJudgments.length > 0
+            ? `I've factored that in and updated the plan. ${msgJudgments.length} new decision${msgJudgments.length !== 1 ? "s" : ""} surfaced that could use your input.`
+            : `Good to know. I've incorporated that into the plan.`,
           timestamp: Date.now(),
         });
       } else {
         addChatMessage({
           id: `sys-${Date.now()}`,
           role: "system",
-          content: `Noted. The tree structure reflects your current deliberation. Try making a decision on a pending judgment node to continue.`,
+          content: `Noted. That doesn't change the current structure, but I'll keep it in mind. If there's a pending decision above, that's the next step.`,
           timestamp: Date.now(),
         });
       }
@@ -525,10 +531,41 @@ export default function ChatView() {
             <ChatBubble key={msg.id} message={msg} />
           ))}
 
-          {/* Inline decision prompts */}
-          {pendingJudgments.map((node) => (
-            <ChatDecisionPrompt key={node.id} node={node} />
-          ))}
+          {/* Inline decision prompts — one at a time with conversational framing */}
+          {pendingJudgments.length > 0 && (
+            <>
+              {/* Conversational intro for the current judgment */}
+              <motion.div
+                key={`intro-${pendingJudgments[0].id}`}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="py-4 bg-cosmos-surface/40"
+              >
+                <div className="max-w-2xl mx-auto px-6">
+                  <div className="flex gap-3">
+                    <div className="w-7 h-7 rounded-full shrink-0 flex items-center justify-center text-xs font-medium bg-cosmos-surface border border-cosmos-border text-cosmos-muted">
+                      C
+                    </div>
+                    <div className="flex-1 text-sm text-cosmos-text/80 leading-relaxed pt-0.5">
+                      <p>
+                        {pendingJudgments[0].conflict
+                          ? pendingJudgments[0].conflict
+                          : `This next part depends on your call. ${pendingJudgments[0].description || ""}`}
+                      </p>
+                      {pendingJudgments.length > 1 && (
+                        <p className="text-xs text-cosmos-muted/50 mt-2">
+                          {pendingJudgments.length - 1} more decision{pendingJudgments.length - 1 !== 1 ? "s" : ""} after this one.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Show only the first pending judgment */}
+              <ChatDecisionPrompt key={pendingJudgments[0].id} node={pendingJudgments[0]} />
+            </>
+          )}
 
           {isDecomposing && (
             <div className="py-4 bg-cosmos-surface/40">

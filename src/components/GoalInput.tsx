@@ -364,9 +364,13 @@ export default function GoalInput() {
                           As you work through decisions, a <span className="text-cosmos-text/80">Values Mirror</span> tracks
                           what your choices reveal about your priorities and where they are in tension with each other.
                           The tool also surfaces periodic reflections on patterns in how you are deciding. You can set
-                          non-negotiables up front (budget, timeline, dealbreakers) so the AI factors in your constraints
-                          throughout. When you are done, the output is a fully structured plan you can reference, document,
+                          constraints up front (budget, timeline, dealbreakers) so the AI factors them in throughout.
+                          When you are done, the output is a fully structured plan you can reference, document,
                           or export as a prompt to build through your preferred AI tool.
+                        </p>
+                        <p className="mt-2 text-cosmos-muted/60 text-xs">
+                          There is a quick mode if you are short on time, but the standard experience is where
+                          Cascade is most useful. Taking the time to sit with each decision is the point.
                         </p>
                       </div>
 
@@ -642,7 +646,7 @@ export default function GoalInput() {
                       {/* Constraints */}
                       <div>
                         <div className="flex items-center gap-2 mb-2">
-                          <span className="text-[10px] text-cosmos-conflict/70 uppercase tracking-wider font-medium">Non-negotiables</span>
+                          <span className="text-[10px] text-cosmos-conflict/70 uppercase tracking-wider font-medium">Constraints</span>
                           <span className="text-[10px] text-cosmos-muted/40">budget, timeline, dealbreakers</span>
                         </div>
                         <div className="flex gap-2">
