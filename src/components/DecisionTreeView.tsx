@@ -130,6 +130,7 @@ export default function DecisionTreeView() {
   const { nodes, activeJudgmentId, counterfactualNodeId, inspectedNodeId, showValuePanel, showSessionPanel, critique, isDecomposing, forceShowSummary, setForceShowSummary, insightCards, addInsightCard, dismissInsightCard, goalText } =
     useStore();
   const [showReadyConfirm, setShowReadyConfirm] = useState(false);
+  const [showMiniMap, setShowMiniMap] = useState(false);
   const lastInsightCountRef = useRef(0);
 
   const { flowNodes, flowEdges } = useMemo(() => layoutTree(nodes), [nodes]);
@@ -184,7 +185,21 @@ export default function DecisionTreeView() {
     }
   }, [resolvedCount]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const visibleInsights = insightCards.filter((c) => !c.dismissed);
+  // Auto-dismiss insight cards after 15 seconds
+  useEffect(() => {
+    const visible = insightCards.filter((c) => !c.dismissed);
+    if (visible.length === 0) return;
+    const latest = visible[visible.length - 1];
+    const age = Date.now() - latest.generatedAt;
+    const remaining = Math.max(0, 15000 - age);
+    const timer = setTimeout(() => {
+      dismissInsightCard(latest.id);
+    }, remaining);
+    return () => clearTimeout(timer);
+  }, [insightCards, dismissInsightCard]);
+
+  // Only show the most recent undismissed insight
+  const visibleInsight = insightCards.filter((c) => !c.dismissed).slice(-1);
 
   return (
     <div className="w-full h-screen relative">
@@ -211,24 +226,38 @@ export default function DecisionTreeView() {
       >
         <Background color="#1e1e2e" gap={24} size={1} />
         <Controls position="bottom-left" />
-        <MiniMap
-          nodeColor={(node) => {
-            const data = node.data as DecisionNode;
-            switch (data.type) {
-              case "goal":
-                return "#818cf8";
-              case "judgment":
-                return "#f59e0b";
-              case "resolved":
-                return "#10b981";
-              case "counterfactual":
-                return "#a78bfa";
-              default:
-                return "#6366f1";
-            }
-          }}
-          maskColor="rgba(10, 10, 15, 0.8)"
-        />
+        {/* MiniMap — hidden by default, shows on hover */}
+        <div
+          className="absolute bottom-0 right-0 z-10"
+          onMouseEnter={() => setShowMiniMap(true)}
+          onMouseLeave={() => setShowMiniMap(false)}
+          style={{ width: showMiniMap ? "auto" : 40, height: showMiniMap ? "auto" : 40 }}
+        >
+          {showMiniMap ? (
+            <MiniMap
+              nodeColor={(node) => {
+                const data = node.data as DecisionNode;
+                switch (data.type) {
+                  case "goal":
+                    return "#818cf8";
+                  case "judgment":
+                    return "#f59e0b";
+                  case "resolved":
+                    return "#10b981";
+                  case "counterfactual":
+                    return "#a78bfa";
+                  default:
+                    return "#6366f1";
+                }
+              }}
+              maskColor="rgba(10, 10, 15, 0.8)"
+            />
+          ) : (
+            <div className="w-10 h-10 flex items-center justify-center text-cosmos-muted/30 hover:text-cosmos-muted/60 transition-colors cursor-default text-[10px]">
+              Map
+            </div>
+          )}
+        </div>
       </ReactFlow>
 
       {/* Node Detail Panel — shows for any clicked node unless judgment/counterfactual is open */}
@@ -249,11 +278,11 @@ export default function DecisionTreeView() {
       {/* Critique Bar */}
       {critique && <CritiqueBar />}
 
-      {/* Insight cards — bottom right, above guide */}
-      {visibleInsights.length > 0 && (
-        <div className="fixed bottom-20 right-4 z-40 w-80 space-y-2">
+      {/* Insight card — bottom right, one at a time, auto-dismisses */}
+      {visibleInsight.length > 0 && (
+        <div className="fixed bottom-20 right-4 z-40 w-80">
           <AnimatePresence>
-            {visibleInsights.slice(-2).map((card) => (
+            {visibleInsight.map((card) => (
               <InsightCardComponent
                 key={card.id}
                 card={card}
@@ -278,16 +307,16 @@ export default function DecisionTreeView() {
       {/* Guide Panel — bottom right */}
       <GuidePanel />
 
-      {/* "I'm Ready" button — bottom left, next to ReactFlow controls */}
+      {/* Finish button — bottom left, next to ReactFlow controls */}
       {canShowReady && (
         <div className="fixed bottom-6 left-[52px] z-50">
           {showReadyConfirm ? (
-            <div className="bg-cosmos-surface/95 backdrop-blur-sm border border-cosmos-glow/30 rounded-xl p-3 shadow-lg w-56">
-              <p className="text-xs text-cosmos-text mb-1.5">Generate your output now?</p>
+            <div className="bg-cosmos-surface/95 backdrop-blur-sm border border-cosmos-glow/30 rounded-xl p-3 shadow-lg w-64">
+              <p className="text-xs text-cosmos-text font-medium mb-1">Finish and generate your final output?</p>
               <p className="text-[10px] text-cosmos-muted mb-3">
                 {pendingCount > 0
-                  ? `You have ${pendingCount} unresolved decision${pendingCount > 1 ? "s" : ""}. Skipped decisions won't be in the output.`
-                  : "All decisions are resolved."}
+                  ? `You still have ${pendingCount} unresolved decision${pendingCount > 1 ? "s" : ""}. Any skipped decisions won't appear in the output.`
+                  : "All decisions are resolved. Your output will reflect every choice you made."}
               </p>
               <div className="flex gap-2">
                 <button
@@ -297,7 +326,7 @@ export default function DecisionTreeView() {
                   }}
                   className="flex-1 px-2.5 py-1.5 text-xs rounded-lg bg-cosmos-resolved/20 border border-cosmos-resolved/40 text-cosmos-resolved hover:bg-cosmos-resolved/30 transition-all"
                 >
-                  Yes, I&apos;m ready
+                  Finish
                 </button>
                 <button
                   onClick={() => setShowReadyConfirm(false)}
@@ -313,7 +342,7 @@ export default function DecisionTreeView() {
               className="flex items-center gap-1.5 px-3 py-2 text-xs rounded-lg border bg-cosmos-surface/90 border-cosmos-border text-cosmos-muted hover:border-cosmos-resolved/30 hover:text-cosmos-resolved transition-all shadow-sm"
             >
               <span>&#10003;</span>
-              <span>I&apos;m Ready</span>
+              <span>Finish &amp; generate output</span>
             </button>
           )}
         </div>
