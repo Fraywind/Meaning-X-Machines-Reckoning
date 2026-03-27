@@ -130,7 +130,6 @@ export default function DecisionTreeView() {
   const { nodes, activeJudgmentId, counterfactualNodeId, inspectedNodeId, showValuePanel, showSessionPanel, critique, isDecomposing, forceShowSummary, setForceShowSummary, insightCards, addInsightCard, dismissInsightCard, goalText } =
     useStore();
   const [showReadyConfirm, setShowReadyConfirm] = useState(false);
-  const [showMiniMap, setShowMiniMap] = useState(false);
   const lastInsightCountRef = useRef(0);
 
   const { flowNodes, flowEdges } = useMemo(() => layoutTree(nodes), [nodes]);
@@ -226,38 +225,26 @@ export default function DecisionTreeView() {
       >
         <Background color="#1e1e2e" gap={24} size={1} />
         <Controls position="bottom-left" />
-        {/* MiniMap — hidden by default, shows on hover */}
-        <div
-          className="absolute bottom-0 right-0 z-10"
-          onMouseEnter={() => setShowMiniMap(true)}
-          onMouseLeave={() => setShowMiniMap(false)}
-          style={{ width: showMiniMap ? "auto" : 40, height: showMiniMap ? "auto" : 40 }}
-        >
-          {showMiniMap ? (
-            <MiniMap
-              nodeColor={(node) => {
-                const data = node.data as DecisionNode;
-                switch (data.type) {
-                  case "goal":
-                    return "#818cf8";
-                  case "judgment":
-                    return "#f59e0b";
-                  case "resolved":
-                    return "#10b981";
-                  case "counterfactual":
-                    return "#a78bfa";
-                  default:
-                    return "#6366f1";
-                }
-              }}
-              maskColor="rgba(10, 10, 15, 0.8)"
-            />
-          ) : (
-            <div className="w-10 h-10 flex items-center justify-center text-cosmos-muted/30 hover:text-cosmos-muted/60 transition-colors cursor-default text-[10px]">
-              Map
-            </div>
-          )}
-        </div>
+        <MiniMap
+          nodeColor={(node) => {
+            const data = node.data as DecisionNode;
+            switch (data.type) {
+              case "goal":
+                return "#818cf8";
+              case "judgment":
+                return "#f59e0b";
+              case "resolved":
+                return "#10b981";
+              case "counterfactual":
+                return "#a78bfa";
+              default:
+                return "#6366f1";
+            }
+          }}
+          maskColor="rgba(10, 10, 15, 0.8)"
+          style={{ opacity: 0.5, width: 120, height: 80 }}
+          position="top-right"
+        />
       </ReactFlow>
 
       {/* Node Detail Panel — shows for any clicked node unless judgment/counterfactual is open */}

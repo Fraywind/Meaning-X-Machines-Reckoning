@@ -286,64 +286,132 @@ function ChatDecisionPrompt({ node }: { node: DecisionNode }) {
   return (
     <div className="py-4 bg-cosmos-surface/40">
       <div className="max-w-2xl mx-auto px-6">
-        <div className="bg-cosmos-bg/60 border border-cosmos-judgment/30 rounded-xl p-5">
-          <div className="flex items-center gap-2 mb-3">
-            <AlertTriangle className="w-4 h-4 text-cosmos-judgment" />
-            <span className="text-xs font-medium text-cosmos-judgment uppercase tracking-wider">Decision Point</span>
+        <div className="bg-cosmos-bg/60 border border-cosmos-judgment/30 rounded-xl p-5 space-y-4">
+          {/* Header */}
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <AlertTriangle className="w-4 h-4 text-cosmos-judgment" />
+              <span className="text-xs font-medium text-cosmos-judgment uppercase tracking-wider">Decision Point</span>
+            </div>
+            <h4 className="text-sm font-medium text-cosmos-text mb-1">{node.label}</h4>
+            <p className="text-xs text-cosmos-muted leading-relaxed">{node.description}</p>
           </div>
 
-          <h4 className="text-sm font-medium text-cosmos-text mb-1">{node.label}</h4>
-          <p className="text-xs text-cosmos-muted mb-4">{node.description}</p>
-
-          {node.conflict && (
-            <p className="text-xs text-cosmos-muted/70 italic mb-4">{node.conflict}</p>
-          )}
-
-          {node.options && node.options.length > 0 && (
-            <div className="space-y-2 mb-4">
-              {node.options.map((option, index) => (
-                <button
-                  key={option.id}
-                  onClick={() => { setSelectedId(option.id); setShowClarify(false); }}
-                  className={`w-full text-left p-3 rounded-lg border transition-all ${
-                    selectedId === option.id
-                      ? "border-cosmos-judgment bg-cosmos-judgment/10"
-                      : "border-cosmos-border/40 hover:border-cosmos-judgment/30 bg-cosmos-bg/30"
-                  }`}
-                >
-                  <div className="text-xs font-medium text-cosmos-text">
-                    {String.fromCharCode(65 + index)}. {option.label}
-                  </div>
-                  <div className="text-[11px] text-cosmos-muted mt-0.5">{option.description}</div>
-                </button>
-              ))}
+          {/* What's at stake */}
+          {node.stakes && (
+            <div className="p-3 bg-cosmos-conflict/8 border border-cosmos-conflict/20 rounded-lg">
+              <div className="text-[10px] font-medium text-cosmos-conflict uppercase tracking-wider mb-1">What&apos;s at stake</div>
+              <p className="text-xs text-cosmos-text/80 leading-relaxed">{node.stakes}</p>
             </div>
           )}
 
+          {/* The conflict */}
+          {node.conflict && (
+            <div className="p-3 bg-cosmos-judgment/8 border border-cosmos-judgment/20 rounded-lg">
+              <div className="text-[10px] font-medium text-cosmos-judgment uppercase tracking-wider mb-1">The conflict</div>
+              <p className="text-xs text-cosmos-text/80 leading-relaxed">{node.conflict}</p>
+            </div>
+          )}
+
+          {/* Blind spots */}
+          {node.blindSpots && node.blindSpots.length > 0 && (
+            <div className="p-3 bg-cosmos-glow/5 border border-cosmos-glow/15 rounded-lg">
+              <div className="text-[10px] font-medium text-cosmos-glow/70 uppercase tracking-wider mb-1">Things to consider</div>
+              <ul className="text-xs text-cosmos-muted space-y-1">
+                {node.blindSpots.map((b, i) => (
+                  <li key={i} className="leading-relaxed">&bull; {b}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Value implications */}
+          {node.valueImplications && node.valueImplications.length > 0 && (
+            <div className="p-3 bg-cosmos-glow/5 border border-cosmos-glow/15 rounded-lg">
+              <div className="text-[10px] font-medium text-cosmos-glow/70 uppercase tracking-wider mb-1">How this connects to your values</div>
+              <ul className="text-xs text-cosmos-muted space-y-1">
+                {node.valueImplications.map((v, i) => (
+                  <li key={i} className="leading-relaxed">&bull; {v}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Choose your path */}
+          <div>
+            <div className="text-xs font-medium text-cosmos-judgment uppercase tracking-wider mb-3">
+              Choose your path
+            </div>
+
+            <div className="space-y-2.5">
+              {node.options?.map((option, index) => (
+                <button
+                  key={option.id}
+                  onClick={() => { setSelectedId(option.id); setShowClarify(false); }}
+                  className={`w-full text-left p-3.5 rounded-lg border transition-all ${
+                    selectedId === option.id
+                      ? "border-cosmos-judgment bg-cosmos-judgment/10 ring-1 ring-cosmos-judgment/20"
+                      : "border-cosmos-border/40 hover:border-cosmos-judgment/30 bg-cosmos-bg/30"
+                  }`}
+                >
+                  <div className="text-xs font-medium text-cosmos-text mb-0.5">
+                    {String.fromCharCode(65 + index)}. {option.label}
+                  </div>
+                  <div className="text-[11px] text-cosmos-muted leading-relaxed">{option.description}</div>
+                  {option.tradeoffs && option.tradeoffs.length > 0 && (
+                    <div className="mt-2 pt-2 border-t border-cosmos-border/20">
+                      <div className="text-[10px] text-cosmos-judgment/60 mb-1">Trade-offs:</div>
+                      <ul className="text-[11px] text-cosmos-muted/70 space-y-0.5">
+                        {option.tradeoffs.map((t, i) => (
+                          <li key={i}>&bull; {t}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {option.consequences && option.consequences.length > 0 && (
+                    <div className="mt-1.5">
+                      <div className="text-[10px] text-cosmos-conflict/60 mb-1">Consequences:</div>
+                      <ul className="text-[11px] text-cosmos-muted/70 space-y-0.5">
+                        {option.consequences.map((c, i) => (
+                          <li key={i}>&bull; {c}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Confirm */}
           {selectedId && !showClarify && (
             <button
               onClick={handleResolve}
               disabled={isResolving}
-              className="w-full py-2.5 bg-cosmos-judgment/20 border border-cosmos-judgment/40 rounded-lg text-cosmos-judgment text-sm font-medium hover:bg-cosmos-judgment/30 disabled:opacity-30 flex items-center justify-center gap-2 mb-2"
+              className="w-full py-2.5 bg-cosmos-judgment/20 border border-cosmos-judgment/40 rounded-lg text-cosmos-judgment text-sm font-medium hover:bg-cosmos-judgment/30 disabled:opacity-30 flex items-center justify-center gap-2"
             >
               {isResolving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ArrowRight className="w-3.5 h-3.5" />}
               {isResolving ? "Processing..." : "Confirm choice"}
             </button>
           )}
 
+          {/* Clarify */}
           {!showClarify ? (
             <button
               onClick={() => { setShowClarify(true); setSelectedId(null); }}
-              className="w-full py-2 text-xs text-cosmos-muted/60 hover:text-cosmos-glow transition-colors"
+              className="w-full py-2 text-xs text-cosmos-muted/50 hover:text-cosmos-glow transition-colors"
             >
               None of these fit? Clarify your situation instead
             </button>
           ) : (
             <div className="space-y-2">
+              <p className="text-xs text-cosmos-muted/60">
+                Explain what the AI got wrong or what it&apos;s missing about your situation.
+              </p>
               <textarea
                 value={clarifyText}
                 onChange={(e) => setClarifyText(e.target.value)}
-                placeholder="Explain your situation or what option you'd prefer..."
+                placeholder={"e.g., \"This doesn't apply because...\" or \"Actually, my situation is...\""}
                 className="w-full bg-cosmos-bg/50 border border-cosmos-border/40 rounded-lg px-4 py-3 text-sm text-cosmos-text placeholder:text-cosmos-muted/30 focus:outline-none focus:border-cosmos-glow/50 resize-none"
                 rows={3}
                 autoFocus
