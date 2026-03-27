@@ -7,9 +7,9 @@ const anthropic = new Anthropic();
 
 export async function POST(req: NextRequest) {
   try {
-    const { goal, existingNodes, existingValues, judgmentContext } = await req.json();
+    const { goal, existingNodes, existingValues, judgmentContext, language } = await req.json();
 
-    const prompt = buildDecomposePrompt(goal, existingNodes || [], existingValues || [], judgmentContext);
+    const prompt = buildDecomposePrompt(goal, existingNodes || [], existingValues || [], judgmentContext, language || "en");
 
     const message = await anthropic.messages.create({
       model: "claude-sonnet-4-20250514",

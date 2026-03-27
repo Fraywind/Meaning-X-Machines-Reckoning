@@ -15,12 +15,15 @@ import {
   Clock,
   ChevronDown,
   BookOpen,
+  TreePine,
+  Globe,
 } from "lucide-react";
 import { useStore, SavedSession } from "@/store/useStore";
 import ModePicker from "./ModePicker";
 import { safeFetch } from "@/lib/api";
 import Starfield from "./Starfield";
 import ThemeSwitcher from "./ThemeSwitcher";
+import { LANGUAGES, getLanguageConfig } from "@/lib/i18n";
 
 export default function GoalInput() {
   const [text, setText] = useState("");
@@ -70,7 +73,8 @@ export default function GoalInput() {
     const recognition = new SpeechRecognition();
     recognition.continuous = true;
     recognition.interimResults = true;
-    recognition.lang = "en-US";
+    const langConfig = getLanguageConfig(useStore.getState().language);
+    recognition.lang = langConfig.speechLang;
 
     let finalTranscript = "";
 
@@ -206,17 +210,24 @@ export default function GoalInput() {
     <div className="relative h-screen overflow-y-auto">
       <Starfield />
 
-      {/* Theme switcher — top right, highlighted on home */}
-      <div className="fixed top-4 right-4 z-30 [&_button]:border-cosmos-glow/30 [&_button]:text-cosmos-text/70">
-        <ThemeSwitcher />
-        <motion.div
-          initial={{ opacity: 0, y: -4 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 2, duration: 0.6 }}
-          className="flex items-center justify-end gap-1 mt-1.5 pr-1 pointer-events-none"
+      {/* Top right: language + theme */}
+      <div className="fixed top-4 right-4 z-30 flex items-center gap-2">
+        {/* Language picker */}
+        <select
+          value={useStore.getState().language}
+          onChange={(e) => useStore.getState().setLanguage(e.target.value as "en" | "zh" | "hi" | "es")}
+          className="bg-cosmos-surface/80 border border-cosmos-border rounded-lg px-2 py-1.5 text-xs text-cosmos-text focus:outline-none focus:border-cosmos-glow/50 cursor-pointer"
+          title="Language"
         >
-          <span className="text-[10px] text-cosmos-muted/50">try the Nature theme! &#8593;</span>
-        </motion.div>
+          {LANGUAGES.map((l) => (
+            <option key={l.id} value={l.id}>
+              {l.flag} {l.nativeLabel}
+            </option>
+          ))}
+        </select>
+        <div className="[&_button]:border-cosmos-glow/30 [&_button]:text-cosmos-text/70">
+          <ThemeSwitcher />
+        </div>
       </div>
 
       <motion.div
@@ -610,12 +621,35 @@ export default function GoalInput() {
             </div>
           </motion.div>
 
+          {/* Forest & Gallery links */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.85, duration: 0.6 }}
+            className="mt-4 flex items-center justify-center gap-3"
+          >
+            <a
+              href="/forest"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] text-cosmos-muted/50 border border-cosmos-border/30 rounded-lg hover:border-cosmos-glow/20 hover:text-cosmos-muted transition-all"
+            >
+              <TreePine className="w-3 h-3" />
+              My Forest
+            </a>
+            <a
+              href="/gallery"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] text-cosmos-muted/50 border border-cosmos-border/30 rounded-lg hover:border-cosmos-glow/20 hover:text-cosmos-muted transition-all"
+            >
+              <Globe className="w-3 h-3" />
+              Community Gallery
+            </a>
+          </motion.div>
+
           {/* Load session from file */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.9, duration: 0.8 }}
-            className="mt-4 flex items-center justify-center gap-3"
+            className="mt-2 flex items-center justify-center gap-3"
           >
             <label className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] text-cosmos-muted/50 border border-cosmos-border/30 rounded-lg hover:border-cosmos-glow/20 hover:text-cosmos-muted cursor-pointer transition-all" title="Upload a previously saved .json session file to continue where you left off">
               <Clock className="w-3 h-3" />

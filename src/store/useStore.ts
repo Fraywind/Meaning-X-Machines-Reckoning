@@ -3,6 +3,7 @@
 import { create } from "zustand";
 import { DecisionNode, UserValue, ViewMode } from "@/types";
 import { ThemeId } from "@/lib/themes";
+import { AppLanguage } from "@/lib/i18n";
 
 export interface ChatMessage {
   id: string;
@@ -38,6 +39,8 @@ interface AppState {
   currentSessionId: string | null;
   // Theme
   theme: ThemeId;
+  // Language
+  language: AppLanguage;
   // View mode
   viewMode: ViewMode;
   // Chat messages (for chat mode)
@@ -71,6 +74,7 @@ interface AppState {
   setCritique: (c: string | null) => void;
   resolveJudgment: (nodeId: string, optionId: string) => void;
   setTheme: (theme: ThemeId) => void;
+  setLanguage: (lang: AppLanguage) => void;
   setViewMode: (mode: ViewMode) => void;
   addChatMessage: (message: ChatMessage) => void;
   setLoadingNotes: (notes: string) => void;
@@ -87,6 +91,17 @@ interface AppState {
 const STORAGE_KEY = "reckoning-sessions";
 const THEME_KEY = "reckoning-theme";
 const VIEW_MODE_KEY = "reckoning-view-mode";
+const LANGUAGE_KEY = "reckoning-language";
+
+function readLanguage(): AppLanguage {
+  try {
+    const raw = localStorage.getItem(LANGUAGE_KEY);
+    if (raw === "en" || raw === "zh" || raw === "hi" || raw === "es") return raw;
+    return "en";
+  } catch {
+    return "en";
+  }
+}
 
 function readTheme(): ThemeId {
   try {
@@ -140,6 +155,7 @@ export const useStore = create<AppState>((set, get) => ({
   savedSessions: [],
   currentSessionId: null,
   theme: "starfield" as ThemeId,
+  language: "en" as AppLanguage,
   viewMode: "tree" as ViewMode,
   chatMessages: [],
   loadingNotes: "",
@@ -238,6 +254,12 @@ export const useStore = create<AppState>((set, get) => ({
       localStorage.setItem(THEME_KEY, theme);
     } catch {}
     set({ theme });
+  },
+  setLanguage: (lang) => {
+    try {
+      localStorage.setItem(LANGUAGE_KEY, lang);
+    } catch {}
+    set({ language: lang });
   },
   setViewMode: (mode) => {
     try {

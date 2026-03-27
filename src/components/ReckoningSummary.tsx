@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   CheckCircle2,
@@ -15,8 +15,11 @@ import {
   Terminal,
   ChevronDown,
   Clipboard,
+  TreePine,
 } from "lucide-react";
 import { useStore } from "@/store/useStore";
+import ShareButton from "@/components/gallery/ShareButton";
+import { addToForest, getForestTreeCount } from "@/lib/forest-store";
 
 function generateBuildPrompt(
   goalText: string,
@@ -109,6 +112,7 @@ export default function ReckoningSummary() {
     nodes,
     values,
     goalText,
+    critique,
     summaryDismissed,
     setSummaryDismissed,
     forceShowSummary,
@@ -120,6 +124,8 @@ export default function ReckoningSummary() {
   const [showBuildPrompt, setShowBuildPrompt] = useState(false);
   const [copiedBuild, setCopiedBuild] = useState(false);
   const [copiedSummary, setCopiedSummary] = useState(false);
+  const [forestCount, setForestCount] = useState(0);
+  const savedToForestRef = useRef(false);
 
   const nodeList = Object.values(nodes);
 
@@ -148,6 +154,15 @@ export default function ReckoningSummary() {
   const allResolved =
     stats.pending === 0 && stats.resolved > 0 && !summaryDismissed;
   const showEarly = forceShowSummary && stats.resolved > 0 && !summaryDismissed;
+
+  // Auto-save to personal forest when complete
+  useEffect(() => {
+    if ((allResolved || showEarly) && !savedToForestRef.current) {
+      savedToForestRef.current = true;
+      addToForest(goalText, nodes, values, critique);
+      setForestCount(getForestTreeCount());
+    }
+  }, [allResolved, showEarly, goalText, nodes, values, critique]);
 
   if (!allResolved && !showEarly) return null;
 
@@ -424,8 +439,20 @@ export default function ReckoningSummary() {
             </button>
           </div>
 
+          {/* Community actions */}
+          <div className="flex gap-3 pt-4 border-t border-cosmos-border/50 mb-3">
+            <ShareButton />
+            <a
+              href="/forest"
+              className="flex-1 py-2.5 px-4 border border-cosmos-border rounded-xl text-cosmos-muted text-xs hover:border-cosmos-glow/30 hover:text-cosmos-glow transition-all flex items-center justify-center gap-2"
+            >
+              <TreePine className="w-3.5 h-3.5" />
+              My Forest {forestCount > 0 && `(${forestCount})`}
+            </a>
+          </div>
+
           {/* Secondary actions */}
-          <div className="flex gap-3 pt-4 border-t border-cosmos-border/50">
+          <div className="flex gap-3">
             <button
               onClick={() => setSummaryDismissed(true)}
               className="flex-1 py-2.5 px-4 border border-cosmos-border rounded-xl text-cosmos-muted text-xs hover:border-cosmos-glow/30 hover:text-cosmos-glow transition-all flex items-center justify-center gap-2"

@@ -7,14 +7,15 @@ const anthropic = new Anthropic();
 
 export async function POST(req: NextRequest) {
   try {
-    const { goal, node, chosenOption, alternateOption, existingValues } = await req.json();
+    const { goal, node, chosenOption, alternateOption, existingValues, language } = await req.json();
 
     const prompt = buildCounterfactualPrompt(
       goal,
       node,
       chosenOption,
       alternateOption,
-      existingValues || []
+      existingValues || [],
+      language || "en"
     );
 
     const message = await anthropic.messages.create({

@@ -1,8 +1,17 @@
-export async function safeFetch(url: string, body: unknown) {
+export async function safeFetch(url: string, body: Record<string, unknown>) {
+  // Auto-inject language from localStorage for LLM API calls
+  let language = "en";
+  try {
+    const stored = typeof window !== "undefined" ? localStorage.getItem("reckoning-language") : null;
+    if (stored === "zh" || stored === "hi" || stored === "es") language = stored;
+  } catch {}
+
+  const enrichedBody = { ...body, language };
+
   const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+    body: JSON.stringify(enrichedBody),
   });
 
   const contentType = res.headers.get("content-type") || "";

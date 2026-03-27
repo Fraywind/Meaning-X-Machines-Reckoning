@@ -1,10 +1,12 @@
 import { DecisionNode, UserValue } from "@/types";
+import { AppLanguage, buildLanguageInstruction } from "@/lib/i18n";
 
 export function buildDecomposePrompt(
   goal: string,
   existingNodes: DecisionNode[],
   existingValues: UserValue[],
-  judgmentContext?: { nodeId: string; chosenOption: string }
+  judgmentContext?: { nodeId: string; chosenOption: string },
+  language: AppLanguage = "en"
 ): string {
   const valuesStr =
     existingValues.length > 0
@@ -74,7 +76,7 @@ Respond with ONLY valid JSON in this exact format:
   "critique": "Constructive criticism ONLY about contradictions between values/priorities the user has EXPLICITLY stated or choices they have actually made. Never assume unstated values. If insufficient evidence, use null."
 }
 
-Generate 5-12 nodes. At least 2 must be judgment nodes with real conflicts. Include at least 2 blind spots across the tree. Be specific and thought-provoking.`;
+Generate 5-12 nodes. At least 2 must be judgment nodes with real conflicts. Include at least 2 blind spots across the tree. Be specific and thought-provoking.${buildLanguageInstruction(language)}`;
 }
 
 export function buildCounterfactualPrompt(
@@ -82,7 +84,8 @@ export function buildCounterfactualPrompt(
   node: DecisionNode,
   chosenOption: string,
   alternateOption: string,
-  existingValues: UserValue[]
+  existingValues: UserValue[],
+  language: AppLanguage = "en"
 ): string {
   return `You are Cascade, exploring a COUNTERFACTUAL timeline.
 
@@ -116,5 +119,5 @@ Respond with ONLY valid JSON:
   ],
   "comparison": "A narrative comparing both paths and what they reveal",
   "insightsRevealed": ["insight 1", "insight 2"]
-}`;
+}${buildLanguageInstruction(language)}`;
 }
