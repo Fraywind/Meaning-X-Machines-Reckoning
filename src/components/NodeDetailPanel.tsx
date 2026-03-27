@@ -14,6 +14,7 @@ import {
   MessageSquare,
   ArrowRight,
   Loader2,
+  Scale,
 } from "lucide-react";
 import { DecisionNode } from "@/types";
 import { useStore } from "@/store/useStore";
@@ -243,6 +244,32 @@ export default function NodeDetailPanel({ node }: Props) {
                 <div className="mb-3 p-3 bg-cosmos-judgment/10 border border-cosmos-judgment/20 rounded-lg">
                   <div className="text-xs font-medium text-cosmos-judgment mb-1">The conflict</div>
                   <p className="text-xs text-cosmos-text/80">{node.conflict}</p>
+                </div>
+              )}
+
+              {/* Tradeoff comparison — side-by-side when 2 options */}
+              {node.options && node.options.length === 2 && (
+                <div className="mb-3 p-2.5 bg-cosmos-surface/60 border border-cosmos-border/30 rounded-lg">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <Scale className="w-3 h-3 text-cosmos-judgment/60" />
+                    <span className="text-[9px] text-cosmos-judgment/60 uppercase tracking-wider font-medium">What you&apos;re trading off</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {node.options.map((opt, i) => (
+                      <div key={opt.id} className={`p-2 rounded-md border ${i === 0 ? "border-cosmos-glow/20 bg-cosmos-glow/5" : "border-cosmos-judgment/20 bg-cosmos-judgment/5"}`}>
+                        <div className={`text-[9px] font-medium mb-0.5 ${i === 0 ? "text-cosmos-glow/70" : "text-cosmos-judgment/70"}`}>
+                          {String.fromCharCode(65 + i)}: {opt.label}
+                        </div>
+                        {opt.tradeoffs.length > 0 && (
+                          <div className="text-[9px] text-cosmos-muted/60 space-y-0.5">
+                            {opt.tradeoffs.slice(0, 2).map((t, j) => (
+                              <div key={j}>&bull; {t}</div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 

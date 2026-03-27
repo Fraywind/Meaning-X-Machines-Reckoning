@@ -16,6 +16,8 @@ import {
   ChevronDown,
   Clipboard,
   TreePine,
+  BookOpen,
+  Loader2,
 } from "lucide-react";
 import { useStore } from "@/store/useStore";
 import ShareButton from "@/components/gallery/ShareButton";
@@ -126,6 +128,10 @@ export default function ReckoningSummary() {
   const [copiedSummary, setCopiedSummary] = useState(false);
   const [forestCount, setForestCount] = useState(0);
   const savedToForestRef = useRef(false);
+  const [chapters, setChapters] = useState<{ branchLabel: string; narrative: string }[]>([]);
+  const [chaptersLoading, setChaptersLoading] = useState(false);
+  const [showChapters, setShowChapters] = useState(false);
+  const chaptersLoadedRef = useRef(false);
 
   const nodeList = Object.values(nodes);
 
@@ -163,6 +169,56 @@ export default function ReckoningSummary() {
       setForestCount(getForestTreeCount());
     }
   }, [allResolved, showEarly, goalText, nodes, values, critique]);
+
+  // Generate chapter summaries when summary appears
+  useEffect(() => {
+    if ((allResolved || showEarly) && !chaptersLoadedRef.current) {
+      chaptersLoadedRef.current = true;
+      setChaptersLoading(true);
+
+      // Group resolved nodes by their root branch
+      const resolvedNodes = nodeList.filter((n) => n.type === "resolved");
+      const rootChildren = nodeList.filter((n) => n.parentId === "goal-root");
+
+      const branches = rootChildren.map((rootChild) => {
+        // Find all resolved descendants of this branch
+        const branchResolved = resolvedNodes.filter((r) => {
+          let current = r;
+          while (current.parentId) {
+            if (current.parentId === rootChild.id) return true;
+            current = nodes[current.parentId];
+            if (!current) break;
+          }
+          return false;
+        });
+
+        return {
+          branchLabel: rootChild.label,
+          decisions: branchResolved.map((n) => ({
+            label: n.label,
+            choice: n.options?.find((o) => o.id === n.selectedOption)?.label || n.selectedOption || "Custom",
+          })),
+          values: values.slice(0, 3).map((v) => ({ label: v.label, strength: v.strength })),
+        };
+      }).filter((b) => b.decisions.length > 0);
+
+      if (branches.length > 0) {
+        fetch("/api/chapters", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ branches, goalText }),
+        })
+          .then((r) => r.json())
+          .then((data) => {
+            if (data.chapters) setChapters(data.chapters);
+          })
+          .catch(() => {})
+          .finally(() => setChaptersLoading(false));
+      } else {
+        setChaptersLoading(false);
+      }
+    }
+  }, [allResolved, showEarly]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!allResolved && !showEarly) return null;
 
@@ -311,12 +367,60 @@ export default function ReckoningSummary() {
             </div>
           </div>
 
+          {/* Chapter summaries */}
+          {(chapters.length > 0 || chaptersLoading) && (
+            <div className="mb-6">
+              <button
+                onClick={() => setShowChapters(!showChapters)}
+                className="flex items-center gap-2 text-xs font-medium text-cosmos-text/70 uppercase tracking-wider mb-3 hover:text-cosmos-glow transition-colors"
+              >
+                <BookOpen className="w-3.5 h-3.5" />
+                Your Decision Story
+                <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${showChapters ? "rotate-180" : ""}`} />
+              </button>
+              <AnimatePresence>
+                {showChapters && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="overflow-hidden"
+                  >
+                    {chaptersLoading ? (
+                      <div className="flex items-center gap-2 p-3 text-xs text-cosmos-muted/50">
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                        Reflecting on your journey...
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {chapters.map((ch, i) => (
+                          <div
+                            key={i}
+                            className="p-3.5 bg-cosmos-glow/3 border-l-2 border-cosmos-glow/30 rounded-r-lg"
+                          >
+                            <div className="text-[10px] text-cosmos-glow/50 uppercase tracking-wider mb-1 font-medium">
+                              {ch.branchLabel}
+                            </div>
+                            <p className="text-xs text-cosmos-muted leading-relaxed italic">
+                              {ch.narrative}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
+
           {/* Values */}
           {topValues.length > 0 && (
             <div className="mb-6">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-xs font-medium text-cosmos-glow uppercase tracking-wider">
-                  Values Revealed
+                  What Your Choices Reveal
                 </h3>
                 <button
                   onClick={() => {
@@ -329,33 +433,53 @@ export default function ReckoningSummary() {
                 </button>
               </div>
               <div className="space-y-2">
-                {topValues.map((v) => (
-                  <div
-                    key={v.id}
-                    className="flex items-center gap-3 p-3 bg-cosmos-bg rounded-lg border border-cosmos-border"
-                  >
-                    <Heart className="w-3.5 h-3.5 text-cosmos-glow shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <div className="text-xs font-medium text-cosmos-text">
-                        {v.label}
-                      </div>
-                      <div className="text-[10px] text-cosmos-muted mt-0.5 line-clamp-1">
-                        {v.description}
-                      </div>
+                {topValues.map((v) => {
+                  // Find what this value was traded against
+                  const tensionWith = v.tradeoffImpacts?.find((t) => {
+                    const lower = t.toLowerCase();
+                    return values.some((other) => other.id !== v.id && lower.includes(other.label.toLowerCase()));
+                  });
+                  const tensionLabel = tensionWith
+                    ? values.find((other) => other.id !== v.id && tensionWith.toLowerCase().includes(other.label.toLowerCase()))?.label
+                    : null;
+
+                  return (
+                    <div
+                      key={v.id}
+                      className="p-3 bg-cosmos-bg rounded-lg border border-cosmos-border"
+                    >
+                      {tensionLabel ? (
+                        <>
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs font-medium text-cosmos-glow">{v.label}</span>
+                            <span className="text-xs text-cosmos-judgment/60">{tensionLabel}</span>
+                          </div>
+                          <div className="relative h-1.5 bg-cosmos-border/40 rounded-full overflow-hidden mb-1">
+                            <div
+                              className="absolute top-0 left-0 h-full rounded-full bg-cosmos-glow/60"
+                              style={{ width: `${v.strength * 100}%` }}
+                            />
+                            <div className="absolute top-0 left-1/2 w-px h-full bg-cosmos-muted/15" />
+                          </div>
+                          <div className="text-[10px] text-cosmos-muted/50">
+                            {v.strength >= 0.7 ? "Consistently prioritized" : v.strength >= 0.4 ? "Balanced but leaning" : "Present but flexible"}
+                          </div>
+                        </>
+                      ) : (
+                        <div className="flex items-center gap-3">
+                          <Heart className="w-3.5 h-3.5 text-cosmos-glow shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-xs font-medium text-cosmos-text">{v.label}</div>
+                            <div className="text-[10px] text-cosmos-muted mt-0.5 line-clamp-1">{v.description}</div>
+                          </div>
+                          <span className="text-[10px] text-cosmos-muted/50 shrink-0">
+                            {v.strength >= 0.7 ? "strong" : v.strength >= 0.4 ? "moderate" : "emerging"}
+                          </span>
+                        </div>
+                      )}
                     </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <div className="w-12 h-1 bg-cosmos-border rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-cosmos-glow rounded-full"
-                          style={{ width: `${v.strength * 100}%` }}
-                        />
-                      </div>
-                      <span className="text-[10px] text-cosmos-muted w-7 text-right">
-                        {Math.round(v.strength * 100)}%
-                      </span>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}

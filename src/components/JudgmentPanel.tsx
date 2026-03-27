@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { AlertTriangle, MessageSquare, ArrowRight, CheckCircle2 } from "lucide-react";
+import { AlertTriangle, MessageSquare, ArrowRight, CheckCircle2, Scale } from "lucide-react";
 import { DecisionNode } from "@/types";
 import { useStore } from "@/store/useStore";
 import { safeFetch } from "@/lib/api";
@@ -142,6 +142,33 @@ export default function JudgmentPanel({ node }: Props) {
             <div className="mb-6 p-3 bg-cosmos-judgment/10 border border-cosmos-judgment/20 rounded-lg">
               <div className="text-xs font-medium text-cosmos-judgment mb-1">The conflict</div>
               <p className="text-sm text-cosmos-text/80">{node.conflict}</p>
+            </div>
+          )}
+
+          {/* Tradeoff comparison — side-by-side when 2 options */}
+          {node.options && node.options.length === 2 && (
+            <div className="mb-5 p-3 bg-cosmos-surface/60 border border-cosmos-border/30 rounded-lg">
+              <div className="flex items-center gap-1.5 mb-2">
+                <Scale className="w-3 h-3 text-cosmos-judgment/60" />
+                <span className="text-[10px] text-cosmos-judgment/60 uppercase tracking-wider font-medium">What you&apos;re trading off</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {node.options.map((opt, i) => (
+                  <div key={opt.id} className={`p-2.5 rounded-lg border ${i === 0 ? "border-cosmos-glow/20 bg-cosmos-glow/5" : "border-cosmos-judgment/20 bg-cosmos-judgment/5"}`}>
+                    <div className={`text-[10px] font-medium mb-1 ${i === 0 ? "text-cosmos-glow/70" : "text-cosmos-judgment/70"}`}>
+                      If you go with {String.fromCharCode(65 + i)}
+                    </div>
+                    <div className="text-[10px] text-cosmos-text/80 font-medium mb-1">{opt.label}</div>
+                    {opt.tradeoffs.length > 0 && (
+                      <div className="text-[9px] text-cosmos-muted/60 space-y-0.5">
+                        {opt.tradeoffs.slice(0, 2).map((t, j) => (
+                          <div key={j}>&bull; {t}</div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 

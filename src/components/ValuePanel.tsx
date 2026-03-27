@@ -6,7 +6,39 @@ import { ChevronDown, TrendingUp, TrendingDown, Minus, Info, ArrowRight } from "
 import { useStore } from "@/store/useStore";
 import { UserValue } from "@/types";
 
-function ValueCard({ value }: { value: UserValue }) {
+/**
+ * Extract what this value was traded against from tradeoffImpacts.
+ * Returns the most meaningful tension label if found.
+ */
+function extractTension(value: UserValue, allValues: UserValue[]): string | null {
+  // Look through tradeoff impacts for mentions of other values
+  if (value.tradeoffImpacts && value.tradeoffImpacts.length > 0) {
+    for (const impact of value.tradeoffImpacts) {
+      const lower = impact.toLowerCase();
+      for (const other of allValues) {
+        if (other.id !== value.id && lower.includes(other.label.toLowerCase())) {
+          return other.label;
+        }
+      }
+    }
+  }
+
+  // Check contradictions
+  if (value.contradictions && value.contradictions.length > 0) {
+    for (const contradiction of value.contradictions) {
+      const lower = contradiction.toLowerCase();
+      for (const other of allValues) {
+        if (other.id !== value.id && lower.includes(other.label.toLowerCase())) {
+          return other.label;
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
+function ValueCard({ value, allValues }: { value: UserValue; allValues: UserValue[] }) {
   const [expanded, setExpanded] = useState(false);
   const nodes = useStore((s) => s.nodes);
 
@@ -15,37 +47,76 @@ function ValueCard({ value }: { value: UserValue }) {
     .map((id) => nodes[id])
     .filter(Boolean);
 
+  // Find what this value is in tension with
+  const tensionLabel = useMemo(() => extractTension(value, allValues), [value, allValues]);
+
+  // Get the most relevant source decision for the "because" line
+  const keyDecision = sourceNodes.find((n) => n.type === "resolved" && n.selectedOption && n.options);
+  const keyDecisionLabel = keyDecision
+    ? `${keyDecision.label} → ${keyDecision.options?.find((o) => o.id === keyDecision.selectedOption)?.label || keyDecision.selectedOption}`
+    : null;
+
   return (
     <div className="rounded-lg border border-cosmos-border bg-cosmos-bg overflow-hidden">
-      {/* Summary row — always visible */}
       <button
         onClick={() => setExpanded(!expanded)}
         className="w-full text-left p-4 hover:bg-cosmos-border/10 transition-colors"
       >
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="text-sm font-medium text-cosmos-text">{value.label}</h3>
-          <div className="flex items-center gap-2">
-            <div className="w-16 h-1.5 bg-cosmos-border rounded-full overflow-hidden">
-              <div
-                className="h-full bg-cosmos-glow rounded-full transition-all duration-500"
-                style={{ width: `${value.strength * 100}%` }}
-              />
+        {/* Tension spectrum or value name */}
+        {tensionLabel ? (
+          <div className="mb-2.5">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-xs font-medium text-cosmos-glow">{value.label}</span>
+              <span className="text-xs font-medium text-cosmos-judgment/70">{tensionLabel}</span>
             </div>
-            <span className="text-xs text-cosmos-muted w-8 text-right">
-              {Math.round(value.strength * 100)}%
-            </span>
-            <ChevronDown
-              className={`w-3.5 h-3.5 text-cosmos-muted transition-transform duration-200 ${
-                expanded ? "rotate-180" : ""
-              }`}
-            />
+            {/* Spectrum bar */}
+            <div className="relative h-2 bg-cosmos-border/40 rounded-full overflow-hidden">
+              <div
+                className="absolute top-0 left-0 h-full rounded-full transition-all duration-500"
+                style={{
+                  width: `${value.strength * 100}%`,
+                  background: `linear-gradient(90deg, rgb(var(--glow)), rgb(var(--glow) / 0.4))`,
+                }}
+              />
+              {/* Center marker */}
+              <div className="absolute top-0 left-1/2 w-px h-full bg-cosmos-muted/20" />
+            </div>
+            <div className="flex items-center justify-between mt-1">
+              <span className="text-[9px] text-cosmos-muted/40">you lean here</span>
+              <span className="text-[9px] text-cosmos-muted/40">
+                {value.strength >= 0.6 ? "strong" : value.strength >= 0.4 ? "balanced" : "mild"}
+              </span>
+            </div>
           </div>
-        </div>
-        <p className="text-xs text-cosmos-muted">{value.description}</p>
+        ) : (
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-medium text-cosmos-text">{value.label}</h3>
+            <div className="flex items-center gap-2">
+              <div className="w-14 h-1.5 bg-cosmos-border rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-cosmos-glow rounded-full transition-all duration-500"
+                  style={{ width: `${value.strength * 100}%` }}
+                />
+              </div>
+              <span className="text-[10px] text-cosmos-muted/50">
+                {value.strength >= 0.7 ? "strong" : value.strength >= 0.4 ? "moderate" : "emerging"}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Grounded "because" line */}
+        {keyDecisionLabel ? (
+          <p className="text-[11px] text-cosmos-muted leading-relaxed">
+            Because you chose <span className="text-cosmos-text/70">{keyDecisionLabel}</span>
+          </p>
+        ) : (
+          <p className="text-xs text-cosmos-muted">{value.description}</p>
+        )}
 
         {value.contradictions && value.contradictions.length > 0 && (
           <div className="mt-2 p-2 bg-cosmos-conflict/10 border border-cosmos-conflict/20 rounded">
-            <div className="text-xs text-cosmos-conflict">Potential contradiction:</div>
+            <div className="text-xs text-cosmos-conflict">Tension detected:</div>
             {value.contradictions.map((c, i) => (
               <p key={i} className="text-xs text-cosmos-muted mt-0.5">
                 {c}
@@ -54,16 +125,19 @@ function ValueCard({ value }: { value: UserValue }) {
           </div>
         )}
 
-        <div className="mt-2 flex items-center gap-1.5 text-xs text-cosmos-muted/50">
-          <Info className="w-3 h-3" />
-          <span>
-            Revealed by {value.sourceNodeIds.length} decision
-            {value.sourceNodeIds.length !== 1 ? "s" : ""} &mdash; tap for details
+        <div className="mt-2 flex items-center justify-between">
+          <span className="text-[10px] text-cosmos-muted/40">
+            {value.sourceNodeIds.length} decision{value.sourceNodeIds.length !== 1 ? "s" : ""}
           </span>
+          <ChevronDown
+            className={`w-3 h-3 text-cosmos-muted/40 transition-transform duration-200 ${
+              expanded ? "rotate-180" : ""
+            }`}
+          />
         </div>
       </button>
 
-      {/* Expanded detail — only on click */}
+      {/* Expanded detail */}
       <AnimatePresence>
         {expanded && (
           <motion.div
@@ -78,7 +152,7 @@ function ValueCard({ value }: { value: UserValue }) {
               {value.reasoning && (
                 <div>
                   <div className="text-[10px] uppercase tracking-wider text-cosmos-glow/60 mb-1.5">
-                    Why this score
+                    What your choices reveal
                   </div>
                   <p className="text-xs text-cosmos-text/80 leading-relaxed">
                     {value.reasoning}
@@ -86,16 +160,15 @@ function ValueCard({ value }: { value: UserValue }) {
                 </div>
               )}
 
-              {/* Tradeoff impacts */}
+              {/* Tradeoff impacts — reframed as "moments that shaped this" */}
               {value.tradeoffImpacts && value.tradeoffImpacts.length > 0 && (
                 <div>
                   <div className="text-[10px] uppercase tracking-wider text-cosmos-glow/60 mb-1.5">
-                    Tradeoff impacts on score
+                    Key moments
                   </div>
                   <div className="space-y-1.5">
                     {value.tradeoffImpacts.map((impact, i) => {
-                      // Try to detect if impact is positive or negative
-                      const isPositive = /\+|\bincreased\b|\braised\b|\bhigher\b|\bstrengthened\b/i.test(impact);
+                      const isPositive = /\+|\bincreased\b|\braised\b|\bhigher\b|\bstrengthened\b|\bprioritized\b/i.test(impact);
                       const isNegative = /\-|\bdecreased\b|\blowered\b|\breduced\b|\bweakened\b/i.test(impact);
                       const ImpactIcon = isPositive
                         ? TrendingUp
@@ -126,7 +199,7 @@ function ValueCard({ value }: { value: UserValue }) {
               {sourceNodes.length > 0 && (
                 <div>
                   <div className="text-[10px] uppercase tracking-wider text-cosmos-glow/60 mb-1.5">
-                    Decisions that revealed this
+                    Decisions that shaped this
                   </div>
                   <div className="space-y-1">
                     {sourceNodes.map((node) => (
@@ -155,10 +228,9 @@ function ValueCard({ value }: { value: UserValue }) {
                 </div>
               )}
 
-              {/* No reasoning fallback */}
               {!value.reasoning && (!value.tradeoffImpacts || value.tradeoffImpacts.length === 0) && (
                 <p className="text-xs text-cosmos-muted/40 italic">
-                  Score reasoning will become more detailed as you make more decisions.
+                  This will become clearer as you make more decisions.
                 </p>
               )}
             </div>
@@ -288,12 +360,12 @@ export default function ValuePanel() {
           <div className="space-y-3">
             <ValuesEvolution values={values} />
             <p className="text-[10px] text-cosmos-muted/40 uppercase tracking-wider">
-              Tap any value to see why it&apos;s scored this way
+              Tap any value to see why — grounded in your actual choices
             </p>
             {values
               .sort((a, b) => b.strength - a.strength)
               .map((value) => (
-                <ValueCard key={value.id} value={value} />
+                <ValueCard key={value.id} value={value} allValues={values} />
               ))}
           </div>
         )}

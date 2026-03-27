@@ -1,12 +1,21 @@
 export async function safeFetch(url: string, body: Record<string, unknown>) {
-  // Auto-inject language from localStorage for LLM API calls
+  // Auto-inject language, quickMode, and constraints from store for LLM API calls
   let language = "en";
+  let quickMode = false;
+  let constraints: string[] = [];
   try {
-    const stored = typeof window !== "undefined" ? localStorage.getItem("reckoning-language") : null;
-    if (stored === "zh" || stored === "hi" || stored === "es") language = stored;
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("reckoning-language");
+      if (stored === "zh" || stored === "hi" || stored === "es") language = stored;
+    }
+    // Import store dynamically to avoid circular deps
+    const { useStore } = await import("@/store/useStore");
+    const state = useStore.getState();
+    quickMode = state.quickMode;
+    constraints = state.constraints;
   } catch {}
 
-  const enrichedBody = { ...body, language };
+  const enrichedBody = { ...body, language, quickMode, constraints };
 
   const res = await fetch(url, {
     method: "POST",

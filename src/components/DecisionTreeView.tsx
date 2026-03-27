@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useCallback, useState } from "react";
+import { useMemo, useCallback, useState, useEffect, useRef } from "react";
 import ReactFlow, {
   Background,
   Controls,
@@ -23,10 +23,12 @@ import SessionPanel from "./SessionPanel";
 import NodeDetailPanel from "./NodeDetailPanel";
 import ReckoningLoader from "./ReckoningLoader";
 import ReckoningSummary from "./ReckoningSummary";
+import InsightCardComponent from "./InsightCard";
 import ThemeSwitcher from "./ThemeSwitcher";
 import Starfield from "./Starfield";
 import GuidePanel from "./GuidePanel";
 import { DecisionNode } from "@/types";
+import { AnimatePresence } from "framer-motion";
 
 const nodeTypes: NodeTypes = {
   treeNode: TreeNode,
@@ -125,9 +127,10 @@ function layoutTree(nodes: Record<string, DecisionNode>): {
 }
 
 export default function DecisionTreeView() {
-  const { nodes, activeJudgmentId, counterfactualNodeId, inspectedNodeId, showValuePanel, showSessionPanel, critique, isDecomposing, forceShowSummary, setForceShowSummary } =
+  const { nodes, activeJudgmentId, counterfactualNodeId, inspectedNodeId, showValuePanel, showSessionPanel, critique, isDecomposing, forceShowSummary, setForceShowSummary, insightCards, addInsightCard, dismissInsightCard, goalText } =
     useStore();
   const [showReadyConfirm, setShowReadyConfirm] = useState(false);
+  const lastInsightCountRef = useRef(0);
 
   const { flowNodes, flowEdges } = useMemo(() => layoutTree(nodes), [nodes]);
 
@@ -147,6 +150,41 @@ export default function DecisionTreeView() {
   const resolvedCount = nodeList.filter((n) => n.type === "resolved").length;
   const pendingCount = nodeList.filter((n) => n.type === "judgment" && n.status !== "resolved").length;
   const canShowReady = resolvedCount > 0 && !forceShowSummary;
+
+  // Generate insight card every 3 resolutions
+  useEffect(() => {
+    if (resolvedCount > 0 && resolvedCount % 3 === 0 && resolvedCount !== lastInsightCountRef.current) {
+      lastInsightCountRef.current = resolvedCount;
+      const resolvedNodes = nodeList
+        .filter((n) => n.type === "resolved")
+        .slice(-3)
+        .map((n) => ({
+          label: n.label,
+          choice: n.options?.find((o) => o.id === n.selectedOption)?.label || n.selectedOption || "Custom",
+        }));
+
+      fetch("/api/insight", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ resolvedNodes, goalText }),
+      })
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.insight) {
+            addInsightCard({
+              id: `insight-${Date.now()}`,
+              content: data.insight,
+              relatedNodeIds: nodeList.filter((n) => n.type === "resolved").slice(-3).map((n) => n.id),
+              dismissed: false,
+              generatedAt: Date.now(),
+            });
+          }
+        })
+        .catch(() => {});
+    }
+  }, [resolvedCount]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const visibleInsights = insightCards.filter((c) => !c.dismissed);
 
   return (
     <div className="w-full h-screen relative">
@@ -210,6 +248,32 @@ export default function DecisionTreeView() {
 
       {/* Critique Bar */}
       {critique && <CritiqueBar />}
+
+      {/* Insight cards — bottom right, above guide */}
+      {visibleInsights.length > 0 && (
+        <div className="fixed bottom-20 right-4 z-40 w-80 space-y-2">
+          <AnimatePresence>
+            {visibleInsights.slice(-2).map((card) => (
+              <InsightCardComponent
+                key={card.id}
+                card={card}
+                onDismiss={() => dismissInsightCard(card.id)}
+              />
+            ))}
+          </AnimatePresence>
+        </div>
+      )}
+
+      {/* Complexity indicator */}
+      {resolvedCount > 0 && (
+        <div className="fixed bottom-6 right-4 z-30 flex items-center gap-2 px-3 py-1.5 bg-cosmos-surface/80 border border-cosmos-border/30 rounded-lg text-[10px] text-cosmos-muted/50">
+          <span className="text-cosmos-resolved">{resolvedCount}</span> decided
+          <span className="w-0.5 h-3 bg-cosmos-border/30" />
+          <span className="text-cosmos-judgment">{pendingCount}</span> pending
+          <span className="w-0.5 h-3 bg-cosmos-border/30" />
+          <span>{nodeList.length}</span> nodes
+        </div>
+      )}
 
       {/* Guide Panel — bottom right */}
       <GuidePanel />

@@ -6,7 +6,9 @@ export function buildDecomposePrompt(
   existingNodes: DecisionNode[],
   existingValues: UserValue[],
   judgmentContext?: { nodeId: string; chosenOption: string },
-  language: AppLanguage = "en"
+  language: AppLanguage = "en",
+  quickMode: boolean = false,
+  constraints: string[] = []
 ): string {
   const valuesStr =
     existingValues.length > 0
@@ -76,7 +78,11 @@ Respond with ONLY valid JSON in this exact format:
   "critique": "Constructive criticism ONLY about contradictions between values/priorities the user has EXPLICITLY stated or choices they have actually made. Never assume unstated values. If insufficient evidence, use null."
 }
 
-Generate 5-12 nodes. At least 2 must be judgment nodes with real conflicts. Include at least 2 blind spots across the tree. Be specific and thought-provoking.${buildLanguageInstruction(language)}`;
+${constraints.length > 0 ? `\n\nUSER'S CONSTRAINTS — these are hard boundaries the user has set. Respect them when generating options and evaluating tradeoffs:\n${constraints.map((c) => `- ${c}`).join("\n")}\nWhen any option or path violates a constraint, flag it clearly.` : ""}
+
+${quickMode
+    ? "Generate 3-6 nodes. Keep the tree shallow (max 3 levels deep). Include 1-2 judgment nodes with the most impactful conflicts. Be concise and actionable — this is a quick reckoning."
+    : "Generate 5-12 nodes. At least 2 must be judgment nodes with real conflicts. Include at least 2 blind spots across the tree. Be specific and thought-provoking."}${buildLanguageInstruction(language)}`;
 }
 
 export function buildCounterfactualPrompt(

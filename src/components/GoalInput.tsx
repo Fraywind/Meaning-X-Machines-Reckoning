@@ -34,6 +34,8 @@ export default function GoalInput() {
   const [showValues, setShowValues] = useState(false);
   const [statedValues, setStatedValues] = useState<string[]>([]);
   const [customValue, setCustomValue] = useState("");
+  const [customConstraint, setCustomConstraint] = useState("");
+  const [constraints, setConstraints] = useState<string[]>([]);
 
   const suggestedValues = [
     "Fairness", "Sustainability", "Cost efficiency", "Speed to market",
@@ -154,6 +156,11 @@ export default function GoalInput() {
         attachments.map((a) => `[${a.name}]:\n${a.content}`).join("\n\n");
     }
 
+    // Set constraints in store before starting
+    if (constraints.length > 0) {
+      useStore.getState().setConstraints(constraints);
+    }
+
     setGoalText(text);
     setHasStarted(true);
     setIsDecomposing(true);
@@ -216,7 +223,7 @@ export default function GoalInput() {
         <select
           value={useStore.getState().language}
           onChange={(e) => useStore.getState().setLanguage(e.target.value as "en" | "zh" | "hi" | "es")}
-          className="bg-cosmos-surface/80 border border-cosmos-border rounded-lg px-2 py-1.5 text-xs text-cosmos-text focus:outline-none focus:border-cosmos-glow/50 cursor-pointer"
+          className="bg-cosmos-surface/80 border border-cosmos-border rounded-lg px-1.5 py-1 text-xs text-cosmos-text focus:outline-none focus:border-cosmos-glow/50 cursor-pointer"
           title="Language"
         >
           {LANGUAGES.map((l) => (
@@ -344,38 +351,48 @@ export default function GoalInput() {
                     className="overflow-hidden"
                   >
                     <div className="mt-3 p-5 bg-cosmos-surface/60 backdrop-blur-sm border border-cosmos-border/40 rounded-2xl text-sm text-cosmos-muted leading-relaxed space-y-4 max-w-xl mx-auto">
+                      <p className="text-cosmos-text text-base font-medium leading-snug">
+                        A structured way to think through hard decisions &mdash; where the AI does the analysis and you make the calls that matter.
+                      </p>
+
+                      <div>
+                        <p>
+                          When you ask an AI to help with something complex, it gives you an answer. But complex tasks
+                          are full of hidden tradeoffs, unstated assumptions, and forks in the road that change everything
+                          downstream. A single response skips over all of that. Cascade doesn&apos;t.
+                        </p>
+                        <p className="mt-2">
+                          You describe your goal, and the AI maps it into a tree of sub-decisions, dependencies, and consequences.
+                          When it hits a point that depends on <span className="text-cosmos-text">your priorities, your context,
+                          or your risk tolerance</span> &mdash; it stops and brings that decision to you with the tradeoffs
+                          laid out. You choose. Your choice cascades forward, reshaping everything that follows.
+                        </p>
+                      </div>
+
                       <div>
                         <h3 className="text-cosmos-text font-medium text-xs uppercase tracking-wider mb-1.5">
-                          What is Cascade?
+                          What you get
                         </h3>
-                        <p>
-                          Cascade is a thinking and planning tool. You describe a complex goal or task, and the AI breaks it down
-                          into a map of sub-decisions, consequences, and paths you might not have seen coming.
-                          Complex tasks are full of nuances and details that are easy to overlook or not even realize
-                          are there. Typically, AI just assumes or skips over these, and those silent assumptions can
-                          have real consequences downstream. In any complex goal or task, there will inevitably be
-                          moments where a decision comes down to tradeoffs and preferences &mdash; choices that have
-                          a cascading effect on everything that follows. When the AI reaches one of those moments,
-                          <span className="text-cosmos-text"> it detects it, surfaces the conflict and tradeoffs,
-                          and brings it to you.</span> You make the judgment call as the human. Your intent drives
-                          what happens next.
-                        </p>
+                        <ul className="space-y-2 text-cosmos-muted">
+                          <li><span className="text-cosmos-text/80">A decision tree</span> that breaks your goal into structured, connected sub-decisions &mdash; not a flat list of steps.</li>
+                          <li><span className="text-cosmos-judgment">Judgment calls</span> surfaced where the AI finds genuine tradeoffs. You see the options, what&apos;s at stake, and what you&apos;d be giving up.</li>
+                          <li><span className="text-cosmos-text/80">A Values Mirror</span> that tracks what your choices actually reveal about your priorities &mdash; and where they&apos;re in tension with each other.</li>
+                          <li><span className="text-cosmos-text/80">Pattern reflections</span> along the way that notice themes in how you&apos;re deciding, so you can see your own reasoning more clearly.</li>
+                          <li>Choose <span className="text-cosmos-glow">Quick</span> for a focused pass or <span className="text-cosmos-glow">Deep</span> for a thorough deliberation with more judgment points.</li>
+                          <li>Set your <span className="text-cosmos-conflict/80">non-negotiables</span> up front &mdash; budget, timeline, dealbreakers &mdash; and the AI respects them throughout.</li>
+                        </ul>
                       </div>
 
                       <div>
                         <h3 className="text-cosmos-text font-medium text-xs uppercase tracking-wider mb-1.5">
                           How to use it
                         </h3>
-                        <ol className="space-y-2.5 text-cosmos-muted list-decimal list-inside">
-                          <li><span className="text-cosmos-text/80">Describe your goal or task</span> with as much detail and context as you can. The more specific you are about your situation, constraints, and who you are, the better the output.</li>
-                          <li>The AI breaks down your complex goal or task into a decision tree of sub-decisions, dependencies, and consequences. Any point that requires a nuanced human call &mdash; something that depends on your values, intent, or priorities &mdash; gets flagged and brought back to you.</li>
-                          <li><span className="text-cosmos-judgment">Highlighted nodes</span> are those judgment points. Click <span className="text-cosmos-text/80">&ldquo;Decide now&rdquo;</span> to see the options, tradeoffs, blind spots, and what&apos;s at stake. You decide which direction to go.</li>
-                          <li>If none of the options fit, you can clarify your situation and redirect the AI. Your choices cascade forward, generating new branches and sometimes surfacing new conflicts.</li>
-                          <li>Once all decisions are resolved, the output is a fully laid-out plan you can reference, document, or export as a prompt to build through your preferred AI tool.</li>
+                        <ol className="space-y-2 text-cosmos-muted list-decimal list-inside">
+                          <li><span className="text-cosmos-text/80">Describe your goal</span> with as much context as you can &mdash; who you are, what you&apos;re working with, what matters to you.</li>
+                          <li>The AI builds a decision tree. <span className="text-cosmos-judgment">Highlighted nodes</span> are judgment calls that need your input &mdash; click to see the tradeoffs and decide.</li>
+                          <li>Your choices cascade forward, generating new branches and sometimes new conflicts. If none of the options fit, redirect the AI.</li>
+                          <li>When you&apos;re done, you get a complete plan you can reference, export, or use as a prompt to build with any AI tool.</li>
                         </ol>
-                        <p className="mt-3 text-cosmos-muted/60 text-xs italic">
-                          Tip: Open the <span className="text-cosmos-text/70">Values Mirror</span> at any point to see what your decisions reveal about your priorities, adjust your stated values, and get explanations for how they connect to your choices.
-                        </p>
                       </div>
                     </div>
                   </motion.div>
@@ -541,16 +558,18 @@ export default function GoalInput() {
               </div>
             )}
 
-            {/* Values section */}
+            {/* Values & Constraints section */}
             <div className="mt-5">
               <button
                 onClick={() => setShowValues(!showValues)}
                 className="flex items-center gap-2 text-sm text-cosmos-text/80 hover:text-cosmos-glow transition-colors"
               >
                 <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${showValues ? "rotate-180" : ""}`} />
-                <span className="font-medium">What matters to you for this task?</span>
-                {statedValues.length > 0 && (
-                  <span className="text-cosmos-glow text-xs">({statedValues.length} selected)</span>
+                <span className="font-medium">Values &amp; constraints</span>
+                {(statedValues.length > 0 || constraints.length > 0) && (
+                  <span className="text-cosmos-glow text-xs">
+                    ({statedValues.length + constraints.length})
+                  </span>
                 )}
               </button>
 
@@ -563,50 +582,106 @@ export default function GoalInput() {
                     transition={{ duration: 0.2 }}
                     className="overflow-hidden"
                   >
-                    <div className="mt-3 p-4 bg-cosmos-surface/50 border border-cosmos-border/30 rounded-xl">
-                      <p className="text-xs text-cosmos-muted/70 mb-3">
-                        Select or add values and priorities that matter to you. The more detailed, the better. The AI will reference these when surfacing tradeoffs and giving feedback.
-                      </p>
-                      <div className="flex flex-wrap gap-2 mb-3">
-                        {suggestedValues.map((v) => (
+                    <div className="mt-3 p-4 bg-cosmos-surface/50 border border-cosmos-border/30 rounded-xl space-y-4">
+                      {/* Values */}
+                      <div>
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-[10px] text-cosmos-glow/70 uppercase tracking-wider font-medium">What you value</span>
+                          <span className="text-[10px] text-cosmos-muted/40">priorities that guide your tradeoffs</span>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5 mb-2">
+                          {suggestedValues.map((v) => (
+                            <button
+                              key={v}
+                              onClick={() => toggleValue(v)}
+                              className={`px-2 py-0.5 text-[10px] rounded-md border transition-all ${
+                                statedValues.includes(v)
+                                  ? "bg-cosmos-glow/15 border-cosmos-glow/40 text-cosmos-glow"
+                                  : "border-cosmos-border/30 text-cosmos-muted/40 hover:border-cosmos-glow/20 hover:text-cosmos-muted"
+                              }`}
+                            >
+                              {v}
+                            </button>
+                          ))}
+                        </div>
+                        <div className="flex gap-2">
+                          <input
+                            value={customValue}
+                            onChange={(e) => setCustomValue(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustomValue(); } }}
+                            placeholder="Add a value..."
+                            className="flex-1 bg-cosmos-bg/50 border border-cosmos-border/30 rounded-lg px-3 py-1.5 text-xs text-cosmos-text placeholder:text-cosmos-muted/30 focus:outline-none focus:border-cosmos-glow/30"
+                          />
                           <button
-                            key={v}
-                            onClick={() => toggleValue(v)}
-                            className={`px-2.5 py-1 text-[11px] rounded-lg border transition-all ${
-                              statedValues.includes(v)
-                                ? "bg-cosmos-glow/15 border-cosmos-glow/40 text-cosmos-glow"
-                                : "border-cosmos-border/40 text-cosmos-muted/50 hover:border-cosmos-glow/20 hover:text-cosmos-muted"
-                            }`}
+                            onClick={addCustomValue}
+                            disabled={!customValue.trim()}
+                            className="px-3 py-1.5 text-xs text-cosmos-glow/60 border border-cosmos-border/30 rounded-lg hover:bg-cosmos-glow/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                           >
-                            {v}
+                            Add
                           </button>
-                        ))}
+                        </div>
                       </div>
-                      <div className="flex gap-2">
-                        <input
-                          value={customValue}
-                          onChange={(e) => setCustomValue(e.target.value)}
-                          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustomValue(); } }}
-                          placeholder="Add your own..."
-                          className="flex-1 bg-cosmos-bg/50 border border-cosmos-border/30 rounded-lg px-3 py-1.5 text-xs text-cosmos-text placeholder:text-cosmos-muted/30 focus:outline-none focus:border-cosmos-glow/30"
-                        />
-                        <button
-                          onClick={addCustomValue}
-                          disabled={!customValue.trim()}
-                          className="px-3 py-1.5 text-xs text-cosmos-glow/60 border border-cosmos-border/30 rounded-lg hover:bg-cosmos-glow/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-                        >
-                          Add
-                        </button>
+
+                      {/* Constraints */}
+                      <div>
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-[10px] text-cosmos-conflict/70 uppercase tracking-wider font-medium">Non-negotiables</span>
+                          <span className="text-[10px] text-cosmos-muted/40">real limits — budget, timeline, dealbreakers</span>
+                        </div>
+                        <div className="flex gap-2">
+                          <input
+                            value={customConstraint}
+                            onChange={(e) => setCustomConstraint(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                const trimmed = customConstraint.trim();
+                                if (trimmed && !constraints.includes(trimmed)) {
+                                  setConstraints((prev) => [...prev, trimmed]);
+                                  setCustomConstraint("");
+                                }
+                              }
+                            }}
+                            placeholder="e.g., Budget under $50k, Must launch by June, US only..."
+                            className="flex-1 bg-cosmos-bg/50 border border-cosmos-border/30 rounded-lg px-3 py-1.5 text-xs text-cosmos-text placeholder:text-cosmos-muted/30 focus:outline-none focus:border-cosmos-conflict/30"
+                          />
+                          <button
+                            onClick={() => {
+                              const trimmed = customConstraint.trim();
+                              if (trimmed && !constraints.includes(trimmed)) {
+                                setConstraints((prev) => [...prev, trimmed]);
+                                setCustomConstraint("");
+                              }
+                            }}
+                            disabled={!customConstraint.trim()}
+                            className="px-3 py-1.5 text-xs text-cosmos-conflict/60 border border-cosmos-border/30 rounded-lg hover:bg-cosmos-conflict/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                          >
+                            Add
+                          </button>
+                        </div>
                       </div>
-                      {statedValues.length > 0 && (
-                        <div className="mt-3 flex flex-wrap gap-1.5">
+
+                      {/* Selected values & constraints pills */}
+                      {(statedValues.length > 0 || constraints.length > 0) && (
+                        <div className="flex flex-wrap gap-1.5 pt-2 border-t border-cosmos-border/20">
                           {statedValues.map((v) => (
                             <span
                               key={v}
-                              className="flex items-center gap-1 px-2.5 py-1 text-[11px] bg-cosmos-glow/10 border border-cosmos-glow/25 rounded-full text-cosmos-glow"
+                              className="flex items-center gap-1 px-2 py-0.5 text-[10px] bg-cosmos-glow/10 border border-cosmos-glow/25 rounded-full text-cosmos-glow"
                             >
                               {v}
                               <button onClick={() => toggleValue(v)} className="hover:text-cosmos-conflict transition-colors">
+                                <X className="w-2.5 h-2.5" />
+                              </button>
+                            </span>
+                          ))}
+                          {constraints.map((c) => (
+                            <span
+                              key={c}
+                              className="flex items-center gap-1 px-2 py-0.5 text-[10px] bg-cosmos-conflict/10 border border-cosmos-conflict/25 rounded-full text-cosmos-conflict/80"
+                            >
+                              {c}
+                              <button onClick={() => setConstraints((prev) => prev.filter((x) => x !== c))} className="hover:text-cosmos-conflict transition-colors">
                                 <X className="w-2.5 h-2.5" />
                               </button>
                             </span>
@@ -619,8 +694,32 @@ export default function GoalInput() {
               </AnimatePresence>
             </div>
 
+            {/* Quick / Deep mode */}
+            <div className="mt-5 flex items-center justify-center gap-3">
+              <button
+                onClick={() => useStore.getState().setQuickMode(true)}
+                className={`px-3 py-1.5 text-[11px] rounded-lg border transition-all ${
+                  useStore.getState().quickMode
+                    ? "bg-cosmos-glow/15 border-cosmos-glow/40 text-cosmos-glow"
+                    : "border-cosmos-border/30 text-cosmos-muted/50 hover:border-cosmos-glow/20 hover:text-cosmos-muted"
+                }`}
+              >
+                Quick (~2 min)
+              </button>
+              <button
+                onClick={() => useStore.getState().setQuickMode(false)}
+                className={`px-3 py-1.5 text-[11px] rounded-lg border transition-all ${
+                  !useStore.getState().quickMode
+                    ? "bg-cosmos-glow/15 border-cosmos-glow/40 text-cosmos-glow"
+                    : "border-cosmos-border/30 text-cosmos-muted/50 hover:border-cosmos-glow/20 hover:text-cosmos-muted"
+                }`}
+              >
+                Deep deliberation
+              </button>
+            </div>
+
             {/* Example prompts */}
-            <div className="mt-8 flex flex-wrap gap-3 justify-center">
+            <div className="mt-5 flex flex-wrap gap-3 justify-center">
               {examples.map(({ text: ex, icon: Icon }) => (
                 <button
                   key={ex}

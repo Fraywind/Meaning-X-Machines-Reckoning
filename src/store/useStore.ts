@@ -13,6 +13,14 @@ export interface ChatMessage {
   relatedNodeIds?: string[];
 }
 
+export interface InsightCard {
+  id: string;
+  content: string;
+  relatedNodeIds: string[];
+  dismissed: boolean;
+  generatedAt: number;
+}
+
 export interface SavedSession {
   id: string;
   goalText: string;
@@ -55,6 +63,12 @@ interface AppState {
   processingNodeIds: Set<string>;
   // Recently resolved nodes (for burst animation)
   recentlyResolvedIds: Set<string>;
+  // Quick reckoning mode (3 levels max)
+  quickMode: boolean;
+  // Insight cards (pattern reflections after 3 resolutions)
+  insightCards: InsightCard[];
+  // Constraints (user-defined constraints for filtering)
+  constraints: string[];
 
   // Actions
   setGoalText: (text: string) => void;
@@ -80,6 +94,12 @@ interface AppState {
   setLoadingNotes: (notes: string) => void;
   setSummaryDismissed: (v: boolean) => void;
   setForceShowSummary: (v: boolean) => void;
+  setQuickMode: (v: boolean) => void;
+  addInsightCard: (card: InsightCard) => void;
+  dismissInsightCard: (id: string) => void;
+  setConstraints: (c: string[]) => void;
+  addConstraint: (c: string) => void;
+  removeConstraint: (c: string) => void;
   // Session management
   saveCurrentSession: () => void;
   loadSession: (id: string) => void;
@@ -163,6 +183,9 @@ export const useStore = create<AppState>((set, get) => ({
   forceShowSummary: false,
   processingNodeIds: new Set(),
   recentlyResolvedIds: new Set(),
+  quickMode: false,
+  insightCards: [],
+  constraints: [],
 
   setGoalText: (text) => set({ goalText: text }),
   setIsDecomposing: (v) => set({ isDecomposing: v }),
@@ -272,6 +295,18 @@ export const useStore = create<AppState>((set, get) => ({
   setLoadingNotes: (notes) => set({ loadingNotes: notes }),
   setSummaryDismissed: (v) => set({ summaryDismissed: v }),
   setForceShowSummary: (v) => set({ forceShowSummary: v, summaryDismissed: false }),
+  setQuickMode: (v) => set({ quickMode: v }),
+  addInsightCard: (card) => set((s) => ({ insightCards: [...s.insightCards, card] })),
+  dismissInsightCard: (id) => set((s) => ({
+    insightCards: s.insightCards.map((c) => c.id === id ? { ...c, dismissed: true } : c),
+  })),
+  setConstraints: (c) => set({ constraints: c }),
+  addConstraint: (c) => set((s) => ({
+    constraints: s.constraints.includes(c) ? s.constraints : [...s.constraints, c],
+  })),
+  removeConstraint: (c) => set((s) => ({
+    constraints: s.constraints.filter((x) => x !== c),
+  })),
 
   saveCurrentSession: () => {
     const state = get();
@@ -358,6 +393,9 @@ export const useStore = create<AppState>((set, get) => ({
       forceShowSummary: false,
       processingNodeIds: new Set(),
       recentlyResolvedIds: new Set(),
+      quickMode: false,
+      insightCards: [],
+      constraints: [],
     });
   },
 }));
