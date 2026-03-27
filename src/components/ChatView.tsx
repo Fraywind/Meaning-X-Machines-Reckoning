@@ -12,6 +12,8 @@ import ReactFlow, {
   useNodesState,
   useEdgesState,
   ConnectionMode,
+  ReactFlowProvider,
+  useReactFlow,
 } from "reactflow";
 import "reactflow/dist/style.css";
 import {
@@ -166,7 +168,7 @@ function ChatBubble({ message }: { message: ChatMessage }) {
 }
 
 // Inline decision prompt in chat — card style
-function ChatDecisionPrompt({ node }: { node: DecisionNode }) {
+function ChatDecisionPrompt({ node, onResolved }: { node: DecisionNode; onResolved?: (nodeId: string) => void }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isResolving, setIsResolving] = useState(false);
   const [showClarify, setShowClarify] = useState(false);
@@ -238,6 +240,7 @@ function ChatDecisionPrompt({ node }: { node: DecisionNode }) {
     } finally {
       setIsDecomposing(false);
       setIsResolving(false);
+      onResolved?.(node.id);
     }
   };
 
@@ -294,6 +297,7 @@ function ChatDecisionPrompt({ node }: { node: DecisionNode }) {
       setIsResolving(false);
       setShowClarify(false);
       setClarifyText("");
+      onResolved?.(node.id);
     }
   };
 
@@ -455,7 +459,7 @@ function ChatDecisionPrompt({ node }: { node: DecisionNode }) {
   );
 }
 
-export default function ChatView() {
+function ChatViewInner() {
   const {
     nodes, critique, isDecomposing, chatMessages, addChatMessage,
     goalText, values, addNodes, addValues, setCritique, setIsDecomposing,
@@ -466,14 +470,42 @@ export default function ChatView() {
   const [showTree, setShowTree] = useState(true);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const judgmentShownAtRef = useRef<number>(0);
+  const lastJudgmentIdRef = useRef<string | null>(null);
 
   const { flowNodes, flowEdges } = useMemo(() => layoutTree(nodes), [nodes]);
   const [rfNodes, , onNodesChange] = useNodesState(flowNodes);
   const [rfEdges, , onEdgesChange] = useEdgesState(flowEdges);
 
+  // Get ReactFlow instance for zoom-to-node
+  let reactFlowInstance: ReturnType<typeof useReactFlow> | null = null;
+  try {
+    reactFlowInstance = useReactFlow();
+  } catch {
+    // Not inside ReactFlowProvider yet
+  }
+
   const nodeList = Object.values(nodes);
   const pendingJudgments = nodeList.filter((n) => n.type === "judgment" && n.status !== "resolved");
   const resolvedCount = nodeList.filter((n) => n.type === "resolved").length;
+
+  // Track when the current judgment appeared, so we can split messages around it
+  const currentJudgment = pendingJudgments[0] || null;
+  useEffect(() => {
+    if (currentJudgment && currentJudgment.id !== lastJudgmentIdRef.current) {
+      lastJudgmentIdRef.current = currentJudgment.id;
+      judgmentShownAtRef.current = Date.now();
+    }
+  }, [currentJudgment]);
+
+  // Split messages: before the current judgment was shown, and after (Q&A during)
+  const judgmentTimestamp = judgmentShownAtRef.current;
+  const messagesBeforeJudgment = currentJudgment
+    ? chatMessages.filter((m) => m.timestamp <= judgmentTimestamp)
+    : chatMessages;
+  const messagesAfterJudgment = currentJudgment
+    ? chatMessages.filter((m) => m.timestamp > judgmentTimestamp)
+    : [];
 
   // Auto-scroll chat
   useEffect(() => {
@@ -656,16 +688,17 @@ export default function ChatView() {
             </div>
           )}
 
-          {chatMessages.map((msg) => (
+          {/* Messages before the current judgment */}
+          {messagesBeforeJudgment.map((msg) => (
             <ChatBubble key={msg.id} message={msg} />
           ))}
 
-          {/* Inline decision prompts — one at a time with conversational framing */}
-          {pendingJudgments.length > 0 && (
+          {/* Inline decision prompt — one at a time with conversational framing */}
+          {currentJudgment && (
             <>
               {/* Conversational intro for the current judgment */}
               <motion.div
-                key={`intro-${pendingJudgments[0].id}`}
+                key={`intro-${currentJudgment.id}`}
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="py-4 bg-cosmos-surface/40"
@@ -677,9 +710,9 @@ export default function ChatView() {
                     </div>
                     <div className="flex-1 text-sm text-cosmos-text/80 leading-relaxed pt-0.5">
                       <p>
-                        {pendingJudgments[0].conflict
-                          ? pendingJudgments[0].conflict
-                          : `This next part depends on your call. ${pendingJudgments[0].description || ""}`}
+                        {currentJudgment.conflict
+                          ? currentJudgment.conflict
+                          : `This next part depends on your call. ${currentJudgment.description || ""}`}
                       </p>
                       {pendingJudgments.length > 1 && (
                         <p className="text-xs text-cosmos-muted/50 mt-2">
@@ -691,10 +724,33 @@ export default function ChatView() {
                 </div>
               </motion.div>
 
-              {/* Show only the first pending judgment */}
-              <ChatDecisionPrompt key={pendingJudgments[0].id} node={pendingJudgments[0]} />
+              {/* The decision card */}
+              <ChatDecisionPrompt
+                key={currentJudgment.id}
+                node={currentJudgment}
+                onResolved={(nodeId) => {
+                  // Zoom the tree to the resolved node
+                  if (reactFlowInstance && showTree) {
+                    const targetNode = flowNodes.find((n) => n.id === nodeId);
+                    if (targetNode) {
+                      setTimeout(() => {
+                        reactFlowInstance!.setCenter(
+                          targetNode.position.x + 150,
+                          targetNode.position.y,
+                          { zoom: 1.2, duration: 600 }
+                        );
+                      }, 300);
+                    }
+                  }
+                }}
+              />
             </>
           )}
+
+          {/* Messages after the judgment (Q&A while deciding) */}
+          {messagesAfterJudgment.map((msg) => (
+            <ChatBubble key={msg.id} message={msg} />
+          ))}
 
           {isDecomposing && (
             <div className="py-4 bg-cosmos-surface/40">
@@ -751,6 +807,20 @@ export default function ChatView() {
             transition={{ duration: 0.3 }}
             className="h-full border-l border-cosmos-border/30 relative z-10 overflow-hidden"
           >
+            {/* Current decision context bar */}
+            {currentJudgment && (
+              <div className="absolute top-0 left-0 right-0 z-20 px-3 py-2.5 bg-cosmos-surface/90 backdrop-blur-sm border-b border-cosmos-judgment/20">
+                <div className="flex items-center gap-2 mb-1">
+                  <AlertTriangle className="w-3 h-3 text-cosmos-judgment" />
+                  <span className="text-[10px] font-medium text-cosmos-judgment uppercase tracking-wider">Deciding</span>
+                </div>
+                <p className="text-xs text-cosmos-text/80 leading-relaxed line-clamp-2">{currentJudgment.label}</p>
+                {currentJudgment.stakes && (
+                  <p className="text-[10px] text-cosmos-muted/60 mt-1 line-clamp-1">{currentJudgment.stakes}</p>
+                )}
+              </div>
+            )}
+
             <ReactFlow
               nodes={flowNodes}
               edges={flowEdges}
@@ -780,13 +850,19 @@ export default function ChatView() {
                 maskColor="rgba(10, 10, 15, 0.8)"
               />
             </ReactFlow>
-
-            {/* Critique shown inline in chat, not as overlay */}
           </motion.div>
         )}
       </AnimatePresence>
 
       <GuidePanel />
     </div>
+  );
+}
+
+export default function ChatView() {
+  return (
+    <ReactFlowProvider>
+      <ChatViewInner />
+    </ReactFlowProvider>
   );
 }
