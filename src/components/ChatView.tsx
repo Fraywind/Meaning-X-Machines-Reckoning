@@ -130,6 +130,7 @@ function layoutTree(nodes: Record<string, DecisionNode>): {
 // Chat message bubble — ChatGPT style
 function ChatBubble({ message }: { message: ChatMessage }) {
   const isUser = message.role === "user";
+  const isCritique = message.id.startsWith("critique-");
 
   return (
     <motion.div
@@ -142,12 +143,21 @@ function ChatBubble({ message }: { message: ChatMessage }) {
           <div className={`w-7 h-7 rounded-full shrink-0 flex items-center justify-center text-xs font-medium ${
             isUser
               ? "bg-cosmos-glow/20 text-cosmos-glow border border-cosmos-glow/30"
-              : "bg-cosmos-surface border border-cosmos-border text-cosmos-muted"
+              : isCritique
+                ? "bg-cosmos-conflict/15 text-cosmos-conflict border border-cosmos-conflict/30"
+                : "bg-cosmos-surface border border-cosmos-border text-cosmos-muted"
           }`}>
             {isUser ? "You" : "C"}
           </div>
-          <div className="flex-1 text-sm text-cosmos-text leading-relaxed pt-0.5">
-            {message.content}
+          <div className="flex-1 pt-0.5">
+            {isCritique && (
+              <div className="text-[10px] font-medium text-cosmos-conflict/70 uppercase tracking-wider mb-1">
+                Perspective
+              </div>
+            )}
+            <div className={`text-sm leading-relaxed ${isCritique ? "text-cosmos-text/80" : "text-cosmos-text"}`}>
+              {message.content}
+            </div>
           </div>
         </div>
       </div>
@@ -216,11 +226,10 @@ function ChatDecisionPrompt({ node }: { node: DecisionNode }) {
       }
       if (data.values) addValues(data.values);
       if (data.critique) {
-        setCritique(data.critique);
         addChatMessage({
           id: `critique-${Date.now()}`,
           role: "system",
-          content: `Observation: ${data.critique}`,
+          content: data.critique,
           timestamp: Date.now(),
         });
       }
@@ -270,7 +279,14 @@ function ChatDecisionPrompt({ node }: { node: DecisionNode }) {
         });
       }
       if (data.values) addValues(data.values);
-      if (data.critique) setCritique(data.critique);
+      if (data.critique) {
+        addChatMessage({
+          id: `critique-${Date.now()}`,
+          role: "system",
+          content: data.critique,
+          timestamp: Date.now(),
+        });
+      }
     } catch (err) {
       console.error("Failed:", err);
     } finally {
@@ -527,7 +543,14 @@ export default function ChatView() {
           });
         }
         if (data.values) addValues(data.values);
-        if (data.critique) setCritique(data.critique);
+        if (data.critique) {
+          addChatMessage({
+            id: `critique-${Date.now()}`,
+            role: "system",
+            content: data.critique,
+            timestamp: Date.now(),
+          });
+        }
       } catch (err) {
         console.error("Failed:", err);
         addChatMessage({
@@ -758,7 +781,7 @@ export default function ChatView() {
               />
             </ReactFlow>
 
-            {critique && <CritiqueBar />}
+            {/* Critique shown inline in chat, not as overlay */}
           </motion.div>
         )}
       </AnimatePresence>
