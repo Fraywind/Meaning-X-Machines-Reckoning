@@ -359,8 +359,8 @@ export default function GoalInput() {
                           Along the way, a <span className="text-cosmos-text/80">Values Mirror</span> tracks what your
                           choices reveal about your priorities and where they&apos;re in tension with each other. Periodic
                           reflections surface patterns in how you&apos;re deciding. You can set non-negotiables up front
-                          (budget, timeline, dealbreakers) and choose between a quick pass or a deeper deliberation
-                          depending on how much you want to explore.
+                          (budget, timeline, dealbreakers). If you&apos;re short on time, a quick mode
+                          is available, though the standard process is where the experience is most useful.
                         </p>
                       </div>
 
@@ -540,7 +540,7 @@ export default function GoalInput() {
               </div>
             )}
 
-            {/* Values & Constraints + Quick/Deep mode — same row */}
+            {/* Values & Constraints + Standard/Quick mode — same row */}
             <div className="mt-5">
               <div className="flex items-center justify-between">
                 <button
@@ -556,18 +556,8 @@ export default function GoalInput() {
                   )}
                 </button>
 
-                {/* Quick / Deep toggle */}
+                {/* Standard / Quick toggle */}
                 <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => useStore.getState().setQuickMode(true)}
-                    className={`px-2.5 py-1 text-[11px] rounded-lg border transition-all ${
-                      useStore.getState().quickMode
-                        ? "bg-cosmos-glow/15 border-cosmos-glow/40 text-cosmos-glow"
-                        : "border-cosmos-border/30 text-cosmos-muted/50 hover:border-cosmos-glow/20 hover:text-cosmos-muted"
-                    }`}
-                  >
-                    Quick (~2 min)
-                  </button>
                   <button
                     onClick={() => useStore.getState().setQuickMode(false)}
                     className={`px-2.5 py-1 text-[11px] rounded-lg border transition-all ${
@@ -576,7 +566,17 @@ export default function GoalInput() {
                         : "border-cosmos-border/30 text-cosmos-muted/50 hover:border-cosmos-glow/20 hover:text-cosmos-muted"
                     }`}
                   >
-                    Deep deliberation
+                    Standard
+                  </button>
+                  <button
+                    onClick={() => useStore.getState().setQuickMode(true)}
+                    className={`px-2.5 py-1 text-[11px] rounded-lg border transition-all ${
+                      useStore.getState().quickMode
+                        ? "bg-cosmos-muted/15 border-cosmos-muted/30 text-cosmos-muted"
+                        : "border-cosmos-border/30 text-cosmos-muted/50 hover:border-cosmos-muted/20 hover:text-cosmos-muted"
+                    }`}
+                  >
+                    Quick
                   </button>
                 </div>
               </div>
