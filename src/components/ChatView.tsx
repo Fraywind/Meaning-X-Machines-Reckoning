@@ -472,6 +472,18 @@ export default function ChatView() {
     el.style.height = Math.min(el.scrollHeight, 200) + "px";
   };
 
+  // Detect if a message is trying to modify the plan vs. asking a question
+  const isTreeModifyingMessage = useCallback((text: string) => {
+    const lower = text.toLowerCase();
+    const modifySignals = [
+      "add ", "remove ", "change ", "update ", "modify ", "restructure",
+      "i want to ", "can we ", "let's ", "what if we ", "pivot ",
+      "actually ", "instead ", "forget ", "scrap ", "redo ",
+      "incorporate ", "factor in ", "consider adding",
+    ];
+    return modifySignals.some((s) => lower.includes(s)) && lower.length > 30;
+  }, []);
+
   const handleSendMessage = useCallback(async () => {
     const text = inputText.trim();
     if (!text) return;
@@ -485,46 +497,72 @@ export default function ChatView() {
     setInputText("");
     if (inputRef.current) inputRef.current.style.height = "auto";
 
-    setIsDecomposing(true);
-    try {
-      const data = await safeFetch("/api/decompose", {
-        goal: `${goalText}\n\n--- User message ---\n${text}`,
-        existingNodes: Object.values(nodes),
-        existingValues: values,
-      });
-      if (data.nodes && (data.nodes as DecisionNode[]).length > 0) {
-        addNodes(data.nodes);
-        const msgJudgments = (data.nodes as DecisionNode[]).filter((n: DecisionNode) => n.type === "judgment");
+    // Route: if the message looks like a question or comment, use the fast chat endpoint
+    // If it looks like it's trying to change the plan, use decompose
+    if (isTreeModifyingMessage(text)) {
+      setIsDecomposing(true);
+      try {
+        const data = await safeFetch("/api/decompose", {
+          goal: `${goalText}\n\n--- User message ---\n${text}`,
+          existingNodes: Object.values(nodes),
+          existingValues: values,
+        });
+        if (data.nodes && (data.nodes as DecisionNode[]).length > 0) {
+          addNodes(data.nodes);
+          const msgJudgments = (data.nodes as DecisionNode[]).filter((n: DecisionNode) => n.type === "judgment");
+          addChatMessage({
+            id: `sys-${Date.now()}`,
+            role: "system",
+            content: msgJudgments.length > 0
+              ? `I've factored that in and updated the plan. ${msgJudgments.length} new decision${msgJudgments.length !== 1 ? "s" : ""} surfaced that could use your input.`
+              : `Good to know. I've incorporated that into the plan.`,
+            timestamp: Date.now(),
+          });
+        } else {
+          addChatMessage({
+            id: `sys-${Date.now()}`,
+            role: "system",
+            content: `Noted. That doesn't change the current structure, but I'll keep it in mind.`,
+            timestamp: Date.now(),
+          });
+        }
+        if (data.values) addValues(data.values);
+        if (data.critique) setCritique(data.critique);
+      } catch (err) {
+        console.error("Failed:", err);
         addChatMessage({
-          id: `sys-${Date.now()}`,
+          id: `err-${Date.now()}`,
           role: "system",
-          content: msgJudgments.length > 0
-            ? `I've factored that in and updated the plan. ${msgJudgments.length} new decision${msgJudgments.length !== 1 ? "s" : ""} surfaced that could use your input.`
-            : `Good to know. I've incorporated that into the plan.`,
+          content: "Something went wrong. Please try again.",
           timestamp: Date.now(),
         });
-      } else {
+      } finally {
+        setIsDecomposing(false);
+      }
+    } else {
+      // Fast path: lightweight chat for questions, comments, clarifications
+      try {
+        const data = await safeFetch("/api/chat", {
+          message: text,
+          goalText,
+        });
         addChatMessage({
           id: `sys-${Date.now()}`,
           role: "system",
-          content: `Noted. That doesn't change the current structure, but I'll keep it in mind. If there's a pending decision above, that's the next step.`,
+          content: data.reply || "I couldn't process that. Try again.",
+          timestamp: Date.now(),
+        });
+      } catch (err) {
+        console.error("Chat failed:", err);
+        addChatMessage({
+          id: `err-${Date.now()}`,
+          role: "system",
+          content: "Something went wrong. Please try again.",
           timestamp: Date.now(),
         });
       }
-      if (data.values) addValues(data.values);
-      if (data.critique) setCritique(data.critique);
-    } catch (err) {
-      console.error("Failed:", err);
-      addChatMessage({
-        id: `err-${Date.now()}`,
-        role: "system",
-        content: "Something went wrong. Please try again.",
-        timestamp: Date.now(),
-      });
-    } finally {
-      setIsDecomposing(false);
     }
-  }, [inputText, goalText, nodes, values, addChatMessage, addNodes, addValues, setCritique, setIsDecomposing]);
+  }, [inputText, goalText, nodes, values, addChatMessage, addNodes, addValues, setCritique, setIsDecomposing, isTreeModifyingMessage]);
 
   return (
     <div className="w-full h-screen relative flex">
