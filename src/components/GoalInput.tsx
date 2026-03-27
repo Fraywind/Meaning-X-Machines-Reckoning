@@ -295,16 +295,6 @@ export default function GoalInput() {
                 ))}
               </h1>
             </div>
-            <p className="text-cosmos-muted text-sm max-w-md mx-auto leading-relaxed">
-              AI breaks it down. You judge and choose.
-            </p>
-            <div className="mt-3 flex items-center justify-center gap-6 text-xs text-cosmos-muted/50">
-              <span>Describe</span>
-              <span className="w-1 h-1 rounded-full bg-cosmos-glow/30" />
-              <span>Deliberate</span>
-              <span className="w-1 h-1 rounded-full bg-cosmos-glow/30" />
-              <span>Decide</span>
-            </div>
           </motion.div>
 
           {/* About dropdowns — two tabs side by side */}
@@ -351,47 +341,39 @@ export default function GoalInput() {
                     className="overflow-hidden"
                   >
                     <div className="mt-3 p-5 bg-cosmos-surface/60 backdrop-blur-sm border border-cosmos-border/40 rounded-2xl text-sm text-cosmos-muted leading-relaxed space-y-4 max-w-xl mx-auto">
-                      <p className="text-cosmos-text text-base font-medium leading-snug">
-                        A structured way to think through hard decisions &mdash; where the AI does the analysis and you make the calls that matter.
-                      </p>
-
-                      <div>
-                        <p>
-                          When you ask an AI to help with something complex, it gives you an answer. But complex tasks
-                          are full of hidden tradeoffs, unstated assumptions, and forks in the road that change everything
-                          downstream. A single response skips over all of that. Cascade doesn&apos;t.
-                        </p>
-                        <p className="mt-2">
-                          You describe your goal, and the AI maps it into a tree of sub-decisions, dependencies, and consequences.
-                          When it hits a point that depends on <span className="text-cosmos-text">your priorities, your context,
-                          or your risk tolerance</span> &mdash; it stops and brings that decision to you with the tradeoffs
-                          laid out. You choose. Your choice cascades forward, reshaping everything that follows.
-                        </p>
-                      </div>
-
                       <div>
                         <h3 className="text-cosmos-text font-medium text-xs uppercase tracking-wider mb-1.5">
-                          What you get
+                          What is Cascade?
                         </h3>
-                        <ul className="space-y-2 text-cosmos-muted">
-                          <li><span className="text-cosmos-text/80">A decision tree</span> that breaks your goal into structured, connected sub-decisions &mdash; not a flat list of steps.</li>
-                          <li><span className="text-cosmos-judgment">Judgment calls</span> surfaced where the AI finds genuine tradeoffs. You see the options, what&apos;s at stake, and what you&apos;d be giving up.</li>
-                          <li><span className="text-cosmos-text/80">A Values Mirror</span> that tracks what your choices actually reveal about your priorities &mdash; and where they&apos;re in tension with each other.</li>
-                          <li><span className="text-cosmos-text/80">Pattern reflections</span> along the way that notice themes in how you&apos;re deciding, so you can see your own reasoning more clearly.</li>
-                          <li>Choose <span className="text-cosmos-glow">Quick</span> for a focused pass or <span className="text-cosmos-glow">Deep</span> for a thorough deliberation with more judgment points.</li>
-                          <li>Set your <span className="text-cosmos-conflict/80">non-negotiables</span> up front &mdash; budget, timeline, dealbreakers &mdash; and the AI respects them throughout.</li>
-                        </ul>
+                        <p>
+                          Cascade is a thinking and planning tool for complex goals and tasks. You describe what you&apos;re
+                          working on, and the AI breaks it down into a structured map of sub-decisions, consequences, and
+                          paths you might not have considered. Complex tasks are full of nuances that are easy to overlook.
+                          Typically, AI just assumes or skips over these, and those silent assumptions can have real
+                          consequences downstream. When the AI reaches a point where the decision comes down to tradeoffs
+                          and preferences &mdash; choices that have a cascading effect on everything that follows &mdash;
+                          <span className="text-cosmos-text"> it surfaces the conflict and brings it to you.</span> You
+                          make the judgment call. Your intent drives what happens next.
+                        </p>
+                        <p className="mt-2">
+                          Along the way, a <span className="text-cosmos-text/80">Values Mirror</span> tracks what your
+                          choices reveal about your priorities and where they&apos;re in tension with each other. Periodic
+                          reflections surface patterns in how you&apos;re deciding. You can set non-negotiables up front
+                          (budget, timeline, dealbreakers) and choose between a quick pass or a deeper deliberation
+                          depending on how much you want to explore.
+                        </p>
                       </div>
 
                       <div>
                         <h3 className="text-cosmos-text font-medium text-xs uppercase tracking-wider mb-1.5">
                           How to use it
                         </h3>
-                        <ol className="space-y-2 text-cosmos-muted list-decimal list-inside">
-                          <li><span className="text-cosmos-text/80">Describe your goal</span> with as much context as you can &mdash; who you are, what you&apos;re working with, what matters to you.</li>
-                          <li>The AI builds a decision tree. <span className="text-cosmos-judgment">Highlighted nodes</span> are judgment calls that need your input &mdash; click to see the tradeoffs and decide.</li>
-                          <li>Your choices cascade forward, generating new branches and sometimes new conflicts. If none of the options fit, redirect the AI.</li>
-                          <li>When you&apos;re done, you get a complete plan you can reference, export, or use as a prompt to build with any AI tool.</li>
+                        <ol className="space-y-2.5 text-cosmos-muted list-decimal list-inside">
+                          <li><span className="text-cosmos-text/80">Describe your goal or task</span> with as much detail and context as you can. The more specific you are about your situation, constraints, and who you are, the better the output.</li>
+                          <li>The AI breaks it down into a decision tree of sub-decisions, dependencies, and consequences. Any point that requires a nuanced human call &mdash; something that depends on your values, intent, or priorities &mdash; gets flagged and brought back to you.</li>
+                          <li><span className="text-cosmos-judgment">Highlighted nodes</span> are those judgment points. Click <span className="text-cosmos-text/80">&ldquo;Decide now&rdquo;</span> to see the options, tradeoffs, and what&apos;s at stake. You decide which direction to go.</li>
+                          <li>If none of the options fit, you can clarify your situation and redirect the AI. Your choices cascade forward, generating new branches and sometimes surfacing new conflicts.</li>
+                          <li>Once all decisions are resolved, the output is a fully laid-out plan you can reference, document, or export as a prompt to build through your preferred AI tool.</li>
                         </ol>
                       </div>
                     </div>
@@ -558,20 +540,46 @@ export default function GoalInput() {
               </div>
             )}
 
-            {/* Values & Constraints section */}
+            {/* Values & Constraints + Quick/Deep mode — same row */}
             <div className="mt-5">
-              <button
-                onClick={() => setShowValues(!showValues)}
-                className="flex items-center gap-2 text-sm text-cosmos-text/80 hover:text-cosmos-glow transition-colors"
-              >
-                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${showValues ? "rotate-180" : ""}`} />
-                <span className="font-medium">Values &amp; constraints</span>
-                {(statedValues.length > 0 || constraints.length > 0) && (
-                  <span className="text-cosmos-glow text-xs">
-                    ({statedValues.length + constraints.length})
-                  </span>
-                )}
-              </button>
+              <div className="flex items-center justify-between">
+                <button
+                  onClick={() => setShowValues(!showValues)}
+                  className="flex items-center gap-2 text-sm text-cosmos-text/80 hover:text-cosmos-glow transition-colors"
+                >
+                  <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${showValues ? "rotate-180" : ""}`} />
+                  <span className="font-medium">Values &amp; constraints</span>
+                  {(statedValues.length > 0 || constraints.length > 0) && (
+                    <span className="text-cosmos-glow text-xs">
+                      ({statedValues.length + constraints.length})
+                    </span>
+                  )}
+                </button>
+
+                {/* Quick / Deep toggle */}
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => useStore.getState().setQuickMode(true)}
+                    className={`px-2.5 py-1 text-[11px] rounded-lg border transition-all ${
+                      useStore.getState().quickMode
+                        ? "bg-cosmos-glow/15 border-cosmos-glow/40 text-cosmos-glow"
+                        : "border-cosmos-border/30 text-cosmos-muted/50 hover:border-cosmos-glow/20 hover:text-cosmos-muted"
+                    }`}
+                  >
+                    Quick (~2 min)
+                  </button>
+                  <button
+                    onClick={() => useStore.getState().setQuickMode(false)}
+                    className={`px-2.5 py-1 text-[11px] rounded-lg border transition-all ${
+                      !useStore.getState().quickMode
+                        ? "bg-cosmos-glow/15 border-cosmos-glow/40 text-cosmos-glow"
+                        : "border-cosmos-border/30 text-cosmos-muted/50 hover:border-cosmos-glow/20 hover:text-cosmos-muted"
+                    }`}
+                  >
+                    Deep deliberation
+                  </button>
+                </div>
+              </div>
 
               <AnimatePresence>
                 {showValues && (
@@ -692,30 +700,6 @@ export default function GoalInput() {
                   </motion.div>
                 )}
               </AnimatePresence>
-            </div>
-
-            {/* Quick / Deep mode */}
-            <div className="mt-5 flex items-center justify-center gap-3">
-              <button
-                onClick={() => useStore.getState().setQuickMode(true)}
-                className={`px-3 py-1.5 text-[11px] rounded-lg border transition-all ${
-                  useStore.getState().quickMode
-                    ? "bg-cosmos-glow/15 border-cosmos-glow/40 text-cosmos-glow"
-                    : "border-cosmos-border/30 text-cosmos-muted/50 hover:border-cosmos-glow/20 hover:text-cosmos-muted"
-                }`}
-              >
-                Quick (~2 min)
-              </button>
-              <button
-                onClick={() => useStore.getState().setQuickMode(false)}
-                className={`px-3 py-1.5 text-[11px] rounded-lg border transition-all ${
-                  !useStore.getState().quickMode
-                    ? "bg-cosmos-glow/15 border-cosmos-glow/40 text-cosmos-glow"
-                    : "border-cosmos-border/30 text-cosmos-muted/50 hover:border-cosmos-glow/20 hover:text-cosmos-muted"
-                }`}
-              >
-                Deep deliberation
-              </button>
             </div>
 
             {/* Example prompts */}
