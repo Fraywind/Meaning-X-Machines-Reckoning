@@ -346,21 +346,27 @@ export default function GoalInput() {
                           What is Cascade?
                         </h3>
                         <p>
-                          Cascade is a thinking and planning tool for complex goals and tasks. You describe what you&apos;re
-                          working on, and the AI breaks it down into a structured map of sub-decisions, consequences, and
-                          paths you might not have considered. Complex tasks are full of nuances that are easy to overlook.
-                          Typically, AI just assumes or skips over these, and those silent assumptions can have real
-                          consequences downstream. When the AI reaches a point where the decision comes down to tradeoffs
-                          and preferences &mdash; choices that have a cascading effect on everything that follows &mdash;
-                          <span className="text-cosmos-text"> it surfaces the conflict and brings it to you.</span> You
-                          make the judgment call. Your intent drives what happens next.
+                          Cascade is a structured deliberation tool. You describe a complex goal or task, and the AI
+                          breaks it down into a decision tree of sub-decisions, consequences, dependencies, and paths
+                          you might not have considered.
                         </p>
                         <p className="mt-2">
-                          Along the way, a <span className="text-cosmos-text/80">Values Mirror</span> tracks what your
-                          choices reveal about your priorities and where they&apos;re in tension with each other. Periodic
-                          reflections surface patterns in how you&apos;re deciding. You can set non-negotiables up front
-                          (budget, timeline, dealbreakers). If you&apos;re short on time, a quick mode
-                          is available, though the standard process is where the experience is most useful.
+                          The difference from a typical AI conversation is what happens at decision points. Complex
+                          tasks are full of nuances and details that are easy to overlook or not even realize are there.
+                          Normally, AI just assumes or skips over these, and those silent assumptions can have real
+                          consequences downstream. In any complex goal, there will be moments where a decision comes
+                          down to tradeoffs and preferences, and those choices have a cascading effect on everything
+                          that follows. When the AI reaches one of those moments,
+                          <span className="text-cosmos-text"> it detects it, surfaces the conflict and tradeoffs, and
+                          brings it to you.</span> You make the judgment call. Your intent drives what happens next.
+                        </p>
+                        <p className="mt-2">
+                          As you work through decisions, a <span className="text-cosmos-text/80">Values Mirror</span> tracks
+                          what your choices reveal about your priorities and where they are in tension with each other.
+                          The tool also surfaces periodic reflections on patterns in how you are deciding. You can set
+                          non-negotiables up front (budget, timeline, dealbreakers) so the AI factors in your constraints
+                          throughout. When you are done, the output is a fully structured plan you can reference, document,
+                          or export as a prompt to build through your preferred AI tool.
                         </p>
                       </div>
 
@@ -370,11 +376,14 @@ export default function GoalInput() {
                         </h3>
                         <ol className="space-y-2.5 text-cosmos-muted list-decimal list-inside">
                           <li><span className="text-cosmos-text/80">Describe your goal or task</span> with as much detail and context as you can. The more specific you are about your situation, constraints, and who you are, the better the output.</li>
-                          <li>The AI breaks it down into a decision tree of sub-decisions, dependencies, and consequences. Any point that requires a nuanced human call &mdash; something that depends on your values, intent, or priorities &mdash; gets flagged and brought back to you.</li>
-                          <li><span className="text-cosmos-judgment">Highlighted nodes</span> are those judgment points. Click <span className="text-cosmos-text/80">&ldquo;Decide now&rdquo;</span> to see the options, tradeoffs, and what&apos;s at stake. You decide which direction to go.</li>
+                          <li>The AI breaks your goal down into a decision tree. Any point that requires a nuanced human call, something that depends on your values, intent, or priorities, gets flagged and brought back to you.</li>
+                          <li><span className="text-cosmos-judgment">Highlighted nodes</span> are those judgment points. Click <span className="text-cosmos-text/80">&ldquo;Decide now&rdquo;</span> to see the options, tradeoffs, blind spots, and what is at stake. You decide which direction to go.</li>
                           <li>If none of the options fit, you can clarify your situation and redirect the AI. Your choices cascade forward, generating new branches and sometimes surfacing new conflicts.</li>
-                          <li>Once all decisions are resolved, the output is a fully laid-out plan you can reference, document, or export as a prompt to build through your preferred AI tool.</li>
+                          <li>Once all decisions are resolved, the output is a fully laid out plan you can reference, document, or export as a prompt to build through your preferred AI tool.</li>
                         </ol>
+                        <p className="mt-3 text-cosmos-muted/60 text-xs italic">
+                          Tip: Open the <span className="text-cosmos-text/70">Values Mirror</span> at any point to see what your decisions reveal about your priorities and how they connect to your choices.
+                        </p>
                       </div>
                     </div>
                   </motion.div>
@@ -634,7 +643,7 @@ export default function GoalInput() {
                       <div>
                         <div className="flex items-center gap-2 mb-2">
                           <span className="text-[10px] text-cosmos-conflict/70 uppercase tracking-wider font-medium">Non-negotiables</span>
-                          <span className="text-[10px] text-cosmos-muted/40">real limits — budget, timeline, dealbreakers</span>
+                          <span className="text-[10px] text-cosmos-muted/40">budget, timeline, dealbreakers</span>
                         </div>
                         <div className="flex gap-2">
                           <input
