@@ -16,7 +16,6 @@ import { ForestTree, getForest, getForestAge, Forest } from "@/lib/forest-store"
 import { getDnaLabels, VALUE_DIMENSIONS } from "@/lib/valueDna";
 import ValueDnaRadar from "@/components/gamification/ValueDnaRadar";
 import Starfield from "@/components/Starfield";
-import ThemeSwitcher from "@/components/ThemeSwitcher";
 import { useStore } from "@/store/useStore";
 import { applyTheme, getTheme } from "@/lib/themes";
 
@@ -347,7 +346,6 @@ export default function ForestPage() {
                 : `${treeCount} ${treeCount === 1 ? "tree" : "trees"} growing \u00b7 ${forestAge} \u00b7 ${forest.totalDecisions} judgment calls made`}
             </p>
           </div>
-          <ThemeSwitcher />
         </div>
 
         {/* Cumulative value DNA */}

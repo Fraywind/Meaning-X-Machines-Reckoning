@@ -221,7 +221,7 @@ export default function GoalInput() {
         >
           {LANGUAGES.map((l) => (
             <option key={l.id} value={l.id}>
-              {l.flag} {l.nativeLabel}
+              {l.label}
             </option>
           ))}
         </select>
@@ -257,22 +257,35 @@ export default function GoalInput() {
                     .cn3 { animation: cascadeNode3 3s ease-in-out infinite; }
                     .cl1 { animation: cascadeLine 3s ease-in-out infinite; animation-delay: 0.3s; }
                     .cl2 { animation: cascadeLine 3s ease-in-out infinite; animation-delay: 0.9s; }
+                    @keyframes cascadeText {
+                      0% { clip-path: inset(0 100% 0 0); }
+                      60% { clip-path: inset(0 0 0 0); }
+                      100% { clip-path: inset(0 0 0 0); }
+                    }
                   `}</style>
                   <circle cx="12" cy="3" r="2" className="cn1" />
                   <line x1="10" y1="5" x2="4" y2="10" className="cl1" />
                   <line x1="12" y1="5" x2="12" y2="10" className="cl1" />
                   <line x1="14" y1="5" x2="20" y2="10" className="cl1" />
-                  <circle cx="4" cy="12" r="2" className="cn2" />
-                  <circle cx="12" cy="12" r="2" className="cn2" />
-                  <circle cx="20" cy="12" r="2" className="cn2" />
+                  <circle cx="4" cy="12" r="2" className="cn2" fill={useStore.getState().theme === "nature" ? "#8B6914" : useStore.getState().theme === "starfield" ? "#E8730E" : "currentColor"} stroke={useStore.getState().theme === "nature" ? "#8B6914" : useStore.getState().theme === "starfield" ? "#E8730E" : "currentColor"} />
+                  <circle cx="12" cy="12" r="2" className="cn2" fill={useStore.getState().theme === "nature" ? "#8B6914" : useStore.getState().theme === "starfield" ? "#E8730E" : "currentColor"} stroke={useStore.getState().theme === "nature" ? "#8B6914" : useStore.getState().theme === "starfield" ? "#E8730E" : "currentColor"} />
+                  <circle cx="20" cy="12" r="2" className="cn2" fill={useStore.getState().theme === "nature" ? "#8B6914" : useStore.getState().theme === "starfield" ? "#E8730E" : "currentColor"} stroke={useStore.getState().theme === "nature" ? "#8B6914" : useStore.getState().theme === "starfield" ? "#E8730E" : "currentColor"} />
                   <line x1="4" y1="14" x2="8" y2="19" className="cl2" />
                   <line x1="12" y1="14" x2="12" y2="19" className="cl2" />
                   <line x1="20" y1="14" x2="16" y2="19" className="cl2" />
                   <circle cx="12" cy="21" r="2" className="cn3" />
                 </svg>
               </div>
-              <h1 className="text-4xl font-display font-bold tracking-tight text-cosmos-text">
-                Cascade
+              <h1 className="text-4xl font-display font-bold tracking-tight text-cosmos-text cursor-default cascade-title">
+                {"Cascade".split("").map((char, i) => (
+                  <span
+                    key={i}
+                    className="cascade-letter inline-block"
+                    style={{ "--cascade-i": i } as React.CSSProperties}
+                  >
+                    {char}
+                  </span>
+                ))}
               </h1>
             </div>
             <p className="text-cosmos-muted text-sm max-w-md mx-auto leading-relaxed">
@@ -621,12 +634,12 @@ export default function GoalInput() {
             </div>
           </motion.div>
 
-          {/* Forest & Gallery links */}
+          {/* Forest, Gallery & Session links — single row */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.85, duration: 0.6 }}
-            className="mt-4 flex items-center justify-center gap-3"
+            className="mt-4 flex items-center justify-center gap-3 flex-wrap"
           >
             <a
               href="/forest"
@@ -642,18 +655,9 @@ export default function GoalInput() {
               <Globe className="w-3 h-3" />
               Community Gallery
             </a>
-          </motion.div>
-
-          {/* Load session from file */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.9, duration: 0.8 }}
-            className="mt-2 flex items-center justify-center gap-3"
-          >
             <label className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] text-cosmos-muted/50 border border-cosmos-border/30 rounded-lg hover:border-cosmos-glow/20 hover:text-cosmos-muted cursor-pointer transition-all" title="Upload a previously saved .json session file to continue where you left off">
               <Clock className="w-3 h-3" />
-              <span>Upload saved session (.json)</span>
+              <span>Upload saved session</span>
               <input
                 type="file"
                 accept=".json"
@@ -681,30 +685,6 @@ export default function GoalInput() {
                 }}
               />
             </label>
-            {Object.keys(useStore.getState().nodes).length > 0 && (
-              <button
-                onClick={() => {
-                  const state = useStore.getState();
-                  const data = {
-                    goalText: state.goalText,
-                    nodes: state.nodes,
-                    values: state.values,
-                    critique: state.critique,
-                    exportedAt: new Date().toISOString(),
-                  };
-                  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement("a");
-                  a.href = url;
-                  a.download = `cascade-session-${Date.now()}.json`;
-                  a.click();
-                  URL.revokeObjectURL(url);
-                }}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] text-cosmos-muted/50 border border-cosmos-border/30 rounded-lg hover:border-cosmos-glow/20 hover:text-cosmos-muted transition-all"
-              >
-                Save to file
-              </button>
-            )}
           </motion.div>
 
           {/* Footer disclaimer */}

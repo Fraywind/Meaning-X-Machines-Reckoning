@@ -9,10 +9,10 @@ export interface LanguageConfig {
 }
 
 export const LANGUAGES: LanguageConfig[] = [
-  { id: "en", label: "English", nativeLabel: "English", speechLang: "en-US", flag: "EN" },
-  { id: "zh", label: "Chinese", nativeLabel: "\u4e2d\u6587", speechLang: "zh-CN", flag: "\u4e2d" },
-  { id: "hi", label: "Hindi", nativeLabel: "\u0939\u093f\u0928\u094d\u0926\u0940", speechLang: "hi-IN", flag: "\u0939\u093f" },
-  { id: "es", label: "Spanish", nativeLabel: "Espa\u00f1ol", speechLang: "es-ES", flag: "ES" },
+  { id: "en", label: "English", nativeLabel: "English", speechLang: "en-US", flag: "" },
+  { id: "zh", label: "Chinese", nativeLabel: "中文", speechLang: "zh-CN", flag: "" },
+  { id: "hi", label: "Hindi", nativeLabel: "हिन्दी", speechLang: "hi-IN", flag: "" },
+  { id: "es", label: "Spanish", nativeLabel: "Español", speechLang: "es-ES", flag: "" },
 ];
 
 export function getLanguageConfig(id: AppLanguage): LanguageConfig {

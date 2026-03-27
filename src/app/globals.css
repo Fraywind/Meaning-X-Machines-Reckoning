@@ -247,6 +247,23 @@ body {
   border-color: rgba(21, 105, 46, 0.4) !important;
 }
 
+/* Cascade title hover animation — letters drop in sequentially */
+@keyframes cascadeLetterDrop {
+  0% { transform: translateY(-8px); opacity: 0; color: rgb(var(--glow)); }
+  40% { transform: translateY(2px); opacity: 1; color: rgb(var(--glow)); }
+  70% { transform: translateY(-1px); opacity: 1; }
+  100% { transform: translateY(0); opacity: 1; color: inherit; }
+}
+
+.cascade-title .cascade-letter {
+  transition: color 0.2s ease;
+}
+
+.cascade-title:hover .cascade-letter {
+  animation: cascadeLetterDrop 0.5s ease-out forwards;
+  animation-delay: calc(var(--cascade-i) * 0.06s);
+}
+
 /* Loading progress bar animation */
 @keyframes loading-shimmer {
   0% { background-position: -200% 0; }

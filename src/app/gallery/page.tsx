@@ -19,7 +19,6 @@ import { SharedTree, TreeComparison, DivergencePoint } from "@/types";
 import TreeCard from "@/components/gallery/TreeCard";
 import ValueDnaRadar from "@/components/gamification/ValueDnaRadar";
 import Starfield from "@/components/Starfield";
-import ThemeSwitcher from "@/components/ThemeSwitcher";
 import { getDnaLabels } from "@/lib/valueDna";
 
 function ComparisonView({
@@ -428,7 +427,6 @@ export default function GalleryPage() {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <ThemeSwitcher />
             {selectedForCompare.length === 2 && (
               <button
                 onClick={handleCompare}

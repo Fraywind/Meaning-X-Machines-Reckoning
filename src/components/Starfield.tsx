@@ -276,7 +276,7 @@ export default function Starfield() {
       const w = canvas!.width;
       const h = canvas!.height;
       // Trees from bottom — randomized positions, stay in left 25% and right 25%
-      const treeCount = 4 + Math.floor(Math.random() * 3); // 4-6 trees
+      const treeCount = 5 + Math.floor(Math.random() * 4); // 5-8 trees
       for (let i = 0; i < treeCount; i++) {
         const onLeft = Math.random() < 0.5;
         const x = onLeft
