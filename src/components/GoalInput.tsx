@@ -24,6 +24,7 @@ import { safeFetch } from "@/lib/api";
 import Starfield from "./Starfield";
 import ThemeSwitcher from "./ThemeSwitcher";
 import { LANGUAGES, getLanguageConfig } from "@/lib/i18n";
+import WombatMascot from "./WombatMascot";
 
 export default function GoalInput() {
   const [text, setText] = useState("");
@@ -245,6 +246,20 @@ export default function GoalInput() {
       >
         <div className="w-full max-w-2xl px-6">
           {/* Logo & tagline */}
+          {/* Wombat mascot greeting */}
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 0.1, duration: 0.6, type: "spring" }}
+            className="flex justify-center mb-4"
+          >
+            <WombatMascot
+              size={120}
+              mood="idle"
+              speechText="Hey there! Tell me what you're working on and I'll help you think it through."
+            />
+          </motion.div>
+
           <motion.div
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
