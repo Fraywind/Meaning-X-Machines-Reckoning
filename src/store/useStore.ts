@@ -21,6 +21,25 @@ export interface InsightCard {
   generatedAt: number;
 }
 
+export interface BriefMessage {
+  role: "setup" | "user";
+  content: string;
+  options?: string[];
+}
+
+export interface PersonaConcern {
+  kind: "pushback" | "enhance";
+  point: string;
+  illustration: string;
+  followupQuestion: string;
+}
+
+export interface BriefExtracted {
+  goal: string | null;
+  values: string[];
+  constraints: string[];
+}
+
 export interface SavedSession {
   id: string;
   goalText: string;
@@ -69,6 +88,38 @@ interface AppState {
   insightCards: InsightCard[];
   // Constraints (user-defined constraints for filtering)
   constraints: string[];
+  // Setup persona (Brief) — first interaction, replaces textarea
+  briefMessages: BriefMessage[];
+  briefReady: boolean;
+  briefExtracted: BriefExtracted;
+  briefLoading: boolean;
+  // Cast — additional personas (Skeptic, Pragmatist, etc.) reachable after Setup
+  castConversations: Record<string, {
+    messages: BriefMessage[];
+    ready: boolean;
+    summary: string;
+    concerns: PersonaConcern[];
+    loading: boolean;
+  }>;
+  currentCastPersona: string | null;
+  visitedCastPersonas: string[];
+  // Setup recommends 2-4 personas at ready — universal (skeptic, pragmatist, stress-test) and/or domain-specific.
+  // Domain-expert personas additionally carry a dossier (expertise, pushFor, vocabulary) so the runtime
+  // prompt for that persona has real domain priming rather than just a name + role label.
+  recommendedPersonas: {
+    id: string;
+    name: string;
+    role: string;
+    archetype: string;
+    expertise?: string;
+    pushFor?: string;
+    vocabulary?: string[];
+  }[];
+  // A pending check-in from one persona suggesting another would have a take.
+  // At most one active at a time. Cleared when user clicks the glow or switches personas.
+  pendingCrossCheck: { fromPersonaId: string; targetPersonaId: string; oneLineTake: string } | null;
+  // Track which (from→to) pairs have already fired a cross-check, capped at 1 per conversation.
+  crossCheckHistory: string[];
 
   // Actions
   setGoalText: (text: string) => void;
@@ -100,6 +151,21 @@ interface AppState {
   setConstraints: (c: string[]) => void;
   addConstraint: (c: string) => void;
   removeConstraint: (c: string) => void;
+  // Setup actions
+  addBriefMessage: (m: BriefMessage) => void;
+  setBriefReady: (ready: boolean, extracted?: BriefExtracted) => void;
+  setBriefLoading: (v: boolean) => void;
+  resetBrief: () => void;
+  // Cast actions
+  addCastMessage: (personaId: string, m: BriefMessage) => void;
+  setCastReady: (personaId: string, ready: boolean, summary?: string, concerns?: PersonaConcern[]) => void;
+  setCastLoading: (personaId: string, v: boolean) => void;
+  setCurrentCastPersona: (id: string | null) => void;
+  markCastVisited: (id: string) => void;
+  setRecommendedPersonas: (list: { id: string; name: string; role: string; archetype: string; expertise?: string; pushFor?: string; vocabulary?: string[] }[]) => void;
+  setPendingCrossCheck: (cc: { fromPersonaId: string; targetPersonaId: string; oneLineTake: string } | null) => void;
+  clearPendingCrossCheck: () => void;
+  resetCast: () => void;
   // Session management
   saveCurrentSession: () => void;
   loadSession: (id: string) => void;
@@ -186,6 +252,16 @@ export const useStore = create<AppState>((set, get) => ({
   quickMode: false,
   insightCards: [],
   constraints: [],
+  briefMessages: [],
+  briefReady: false,
+  briefExtracted: { goal: null, values: [], constraints: [] },
+  briefLoading: false,
+  castConversations: {},
+  currentCastPersona: null,
+  visitedCastPersonas: [],
+  recommendedPersonas: [],
+  pendingCrossCheck: null,
+  crossCheckHistory: [],
 
   setGoalText: (text) => set({ goalText: text }),
   setIsDecomposing: (v) => set({ isDecomposing: v }),
@@ -308,6 +384,108 @@ export const useStore = create<AppState>((set, get) => ({
     constraints: s.constraints.filter((x) => x !== c),
   })),
 
+  addBriefMessage: (m) => set((s) => ({ briefMessages: [...s.briefMessages, m] })),
+  setBriefReady: (ready, extracted) =>
+    set({
+      briefReady: ready,
+      briefExtracted: extracted || { goal: null, values: [], constraints: [] },
+    }),
+  setBriefLoading: (v) => set({ briefLoading: v }),
+  resetBrief: () =>
+    set({
+      briefMessages: [],
+      briefReady: false,
+      briefExtracted: { goal: null, values: [], constraints: [] },
+      briefLoading: false,
+    }),
+
+  addCastMessage: (personaId, m) =>
+    set((s) => {
+      const existing = s.castConversations[personaId] || {
+        messages: [],
+        ready: false,
+        summary: "",
+        concerns: [],
+        loading: false,
+      };
+      return {
+        castConversations: {
+          ...s.castConversations,
+          [personaId]: { ...existing, messages: [...existing.messages, m] },
+        },
+      };
+    }),
+
+  setCastReady: (personaId, ready, summary, concerns) =>
+    set((s) => {
+      const existing = s.castConversations[personaId] || {
+        messages: [],
+        ready: false,
+        summary: "",
+        concerns: [],
+        loading: false,
+      };
+      return {
+        castConversations: {
+          ...s.castConversations,
+          [personaId]: {
+            ...existing,
+            ready,
+            summary: summary ?? existing.summary,
+            concerns: concerns ?? existing.concerns,
+          },
+        },
+      };
+    }),
+
+  setCastLoading: (personaId, v) =>
+    set((s) => {
+      const existing = s.castConversations[personaId] || {
+        messages: [],
+        ready: false,
+        summary: "",
+        concerns: [],
+        loading: false,
+      };
+      return {
+        castConversations: {
+          ...s.castConversations,
+          [personaId]: { ...existing, loading: v },
+        },
+      };
+    }),
+
+  setCurrentCastPersona: (id) => set({ currentCastPersona: id }),
+
+  markCastVisited: (id) =>
+    set((s) => ({
+      visitedCastPersonas: s.visitedCastPersonas.includes(id)
+        ? s.visitedCastPersonas
+        : [...s.visitedCastPersonas, id],
+    })),
+
+  setRecommendedPersonas: (list) => set({ recommendedPersonas: list }),
+  setPendingCrossCheck: (cc) =>
+    set((s) =>
+      cc
+        ? {
+            pendingCrossCheck: cc,
+            crossCheckHistory: [...s.crossCheckHistory, `${cc.fromPersonaId}->${cc.targetPersonaId}`],
+          }
+        : { pendingCrossCheck: null },
+    ),
+  clearPendingCrossCheck: () => set({ pendingCrossCheck: null }),
+
+  resetCast: () =>
+    set({
+      castConversations: {},
+      currentCastPersona: null,
+      visitedCastPersonas: [],
+      recommendedPersonas: [],
+      pendingCrossCheck: null,
+      crossCheckHistory: [],
+    }),
+
   saveCurrentSession: () => {
     const state = get();
     if (!state.goalText || Object.keys(state.nodes).length === 0) return;
@@ -396,6 +574,16 @@ export const useStore = create<AppState>((set, get) => ({
       quickMode: false,
       insightCards: [],
       constraints: [],
+      briefMessages: [],
+      briefReady: false,
+      briefExtracted: { goal: null, values: [], constraints: [] },
+      briefLoading: false,
+      castConversations: {},
+      currentCastPersona: null,
+      visitedCastPersonas: [],
+      recommendedPersonas: [],
+      pendingCrossCheck: null,
+      crossCheckHistory: [],
     });
   },
 }));

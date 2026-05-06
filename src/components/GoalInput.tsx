@@ -1,211 +1,143 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ArrowRight,
   Gamepad2,
   GraduationCap,
   Home,
-  Paperclip,
-  Mic,
-  MicOff,
   ShieldAlert,
-  X,
   Clock,
   ChevronDown,
   BookOpen,
   TreePine,
   Globe,
 } from "lucide-react";
-import { useStore, SavedSession } from "@/store/useStore";
+import { useStore } from "@/store/useStore";
 import ModePicker from "./ModePicker";
+import SetupPanel from "./SetupPanel";
+import CastPersonaPanel, { CastPersonaConfig } from "./CastPersonaPanel";
+import SkepticCharacter from "./personas/SkepticCharacter";
+import PragmatistCharacter from "./personas/PragmatistCharacter";
+import StressTestCharacter from "./personas/StressTestCharacter";
+import ExpertCharacter from "./personas/ExpertCharacter";
 import { safeFetch } from "@/lib/api";
 import Starfield from "./Starfield";
 import ThemeSwitcher from "./ThemeSwitcher";
-import { LANGUAGES, getLanguageConfig } from "@/lib/i18n";
+import { LANGUAGES } from "@/lib/i18n";
+
+/** Map archetype id to Character component. Unknown archetypes fall back to ExpertCharacter. */
+// Trim the user's goal to a short, lowercase fragment that reads naturally
+// inside an opener sentence. Avoids quoting it back verbatim with capitals.
+function shortGoal(goal: string): string {
+  const t = goal.trim();
+  if (!t) return "";
+  // Strip leading "I want to" / "I'm trying to" / "How do I" / etc., lowercase.
+  const cleaned = t
+    .replace(/^(i\s+want\s+to|i'm\s+trying\s+to|i\s+am\s+trying\s+to|how\s+do\s+i|should\s+i|can\s+i|i\s+need\s+to|let's|deciding\s+whether\s+to|figuring\s+out\s+whether\s+to)\s+/i, "")
+    .replace(/[?.!]+$/, "")
+    .toLowerCase();
+  // Cap length so it slots into a sentence cleanly.
+  return cleaned.length > 80 ? cleaned.slice(0, 80) + "..." : cleaned;
+}
+
+function buildCastPersonaConfig(
+  rec: { id: string; name: string; role: string; archetype: string },
+  goal: string = "",
+): CastPersonaConfig {
+  let CharacterComponent: React.ComponentType<{ thinking: boolean }>;
+  let openingMessage: string;
+  let openingOptions: string[] | undefined;
+  const g = shortGoal(goal);
+
+  switch (rec.archetype) {
+    case "skeptic":
+      // Skeptic stays consistent: same opening regardless of the goal.
+      CharacterComponent = SkepticCharacter;
+      openingMessage =
+        "Let's pressure-test this. What's the strongest case for your direction, and what's the case against you've already considered?";
+      openingOptions = [
+        "I haven't really stress-tested it",
+        "Push me on the assumptions",
+        "Tell me what you'd attack first",
+      ];
+      break;
+    case "pragmatist":
+      CharacterComponent = PragmatistCharacter;
+      openingMessage = g
+        ? `If you're going to ${g}, what does Monday morning actually look like? Who does the work, and where does the first dollar go?`
+        : "Tell me what you actually do tomorrow morning if this goes ahead. Who does the work, and where does the first dollar go?";
+      openingOptions = [
+        "I haven't planned that part yet",
+        "Walk me through what I'm missing",
+        "What would you do in the first week?",
+      ];
+      break;
+    case "stress-test":
+      CharacterComponent = StressTestCharacter;
+      openingMessage = g
+        ? `Picture this: you went ahead and tried to ${g}, and a year in it isn't working the way you hoped. What's the version of failure you'd actually be most embarrassed by?`
+        : "Picture this: you went ahead with this, and a year in it isn't working the way you hoped. What's the version of failure you'd actually be most embarrassed by?";
+      openingOptions = [
+        "I'm not sure where it would crack",
+        "Help me name the quiet failure modes",
+        "What do most people in this situation miss?",
+      ];
+      break;
+    default:
+      // Domain-specific or unknown → Expert with name-derived accent color
+      // eslint-disable-next-line react/display-name
+      CharacterComponent = ({ thinking }: { thinking: boolean }) => (
+        <ExpertCharacter thinking={thinking} accentSeed={rec.name} />
+      );
+      // Substantive opener: poses a real domain-flavored question instead
+      // of introducing themselves and handing the work back to the user.
+      openingMessage = g
+        ? `${rec.name} here. The thing I'd ask first about ${g}: what made you think the existing options aren't already covering this? Walk me through what you've actually seen, not what you think might be there.`
+        : `${rec.name} here. The thing I'd ask first: what made you think the existing options aren't already covering this? Walk me through what you've actually seen.`;
+      openingOptions = [
+        "I've looked at what's out there",
+        "Honestly, I'm assuming",
+        "I've seen people struggle with the current options",
+      ];
+  }
+
+  return {
+    id: rec.id,
+    name: rec.name,
+    subtitle: rec.role || "(domain expert)",
+    thinkingLabel: "thinking...",
+    archetype: rec.archetype,
+    role: rec.role,
+    openingMessage,
+    openingOptions,
+    CharacterComponent,
+  };
+}
 
 export default function GoalInput() {
-  const [text, setText] = useState("");
   const [showWhat, setShowWhat] = useState(false);
   const [showWhy, setShowWhy] = useState(false);
-  const [attachments, setAttachments] = useState<{ name: string; content: string }[]>([]);
-  const [isRecording, setIsRecording] = useState(false);
-  const [showValues, setShowValues] = useState(false);
-  const [statedValues, setStatedValues] = useState<string[]>([]);
-  const [customValue, setCustomValue] = useState("");
-  const [customConstraint, setCustomConstraint] = useState("");
-  const [constraints, setConstraints] = useState<string[]>([]);
 
-  const suggestedValues = [
-    "Fairness", "Sustainability", "Cost efficiency", "Speed to market",
-    "User safety", "Inclusivity", "Privacy", "Innovation",
-    "Long-term viability", "Transparency", "Community impact", "Quality",
-  ];
-
-  const toggleValue = (v: string) => {
-    setStatedValues((prev) =>
-      prev.includes(v) ? prev.filter((x) => x !== v) : [...prev, v]
-    );
-  };
-
-  const addCustomValue = () => {
-    const trimmed = customValue.trim();
-    if (trimmed && !statedValues.includes(trimmed)) {
-      setStatedValues((prev) => [...prev, trimmed]);
-      setCustomValue("");
-    }
-  };
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
-
-  const toggleRecording = useCallback(() => {
-    if (isRecording) {
-      recognitionRef.current?.stop();
-      setIsRecording(false);
-      return;
-    }
-
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      alert("Speech recognition is not supported in this browser. Try Chrome.");
-      return;
-    }
-
-    const recognition = new SpeechRecognition();
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    const langConfig = getLanguageConfig(useStore.getState().language);
-    recognition.lang = langConfig.speechLang;
-
-    let finalTranscript = "";
-
-    recognition.onresult = (event: SpeechRecognitionEvent) => {
-      let interim = "";
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const transcript = event.results[i][0].transcript;
-        if (event.results[i].isFinal) {
-          finalTranscript += transcript + " ";
-        } else {
-          interim = transcript;
-        }
-      }
-      setText((prev) => {
-        const base = prev.replace(/\u200B.*$/, "").trimEnd();
-        const spoken = (finalTranscript + interim).trim();
-        if (!spoken) return base;
-        return base ? `${base} ${spoken}` : spoken;
-      });
-    };
-
-    recognition.onerror = () => {
-      setIsRecording(false);
-    };
-
-    recognition.onend = () => {
-      setIsRecording(false);
-      // Clean up any interim marker
-      setText((prev) => prev.replace(/\u200B.*$/, "").trimEnd());
-    };
-
-    recognitionRef.current = recognition;
-    recognition.start();
-    setIsRecording(true);
-  }, [isRecording]);
   const {
-    setGoalText, setHasStarted, setIsDecomposing, addNodes, addValues, setCritique,
-    savedSessions, loadSessionsFromStorage, loadSession,
+    setGoalText,
+    setHasStarted,
+    setIsDecomposing,
+    addNodes,
+    addValues,
+    setCritique,
+    loadSessionsFromStorage,
+    currentCastPersona,
+    setCurrentCastPersona,
+    castConversations,
+    briefExtracted,
+    recommendedPersonas,
+    briefMessages,
   } = useStore();
 
   useEffect(() => {
     loadSessionsFromStorage();
   }, [loadSessionsFromStorage]);
-
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) return;
-
-    Array.from(files).forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        const content = ev.target?.result as string;
-        setAttachments((prev) => [...prev, { name: file.name, content }]);
-      };
-      reader.readAsText(file);
-    });
-
-    // Reset so the same file can be re-uploaded
-    e.target.value = "";
-  };
-
-  const removeAttachment = (index: number) => {
-    setAttachments((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const handleSubmit = useCallback(async () => {
-    if (!text.trim()) return;
-
-    // Build the full goal with values and attachments context
-    let fullGoal = text;
-    if (statedValues.length > 0) {
-      fullGoal += `\n\n--- Values and priorities the user explicitly stated matter to them ---\n${statedValues.join(", ")}\nWhen critiquing decisions, reference these stated values. Distinguish between values the user stated upfront vs. values you infer from their choices.`;
-    }
-    if (attachments.length > 0) {
-      fullGoal +=
-        "\n\n--- Attached reference materials ---\n" +
-        attachments.map((a) => `[${a.name}]:\n${a.content}`).join("\n\n");
-    }
-
-    // Set constraints in store before starting
-    if (constraints.length > 0) {
-      useStore.getState().setConstraints(constraints);
-    }
-
-    setGoalText(text);
-    setHasStarted(true);
-    setIsDecomposing(true);
-
-    addNodes([
-      {
-        id: "goal-root",
-        type: "goal",
-        label: text.length > 60 ? text.slice(0, 57) + "..." : text,
-        description: text,
-        parentId: null,
-        children: [],
-        status: "active",
-      },
-    ]);
-
-    try {
-      const data = await safeFetch("/api/decompose", { goal: fullGoal });
-
-      if (data.error) {
-        console.error("API error:", data.error);
-        alert("Something went wrong connecting to the AI. Please try again.\n\n" + data.error);
-        setIsDecomposing(false);
-        setHasStarted(false);
-        return;
-      }
-
-      const nodes = (data.nodes || []).map(
-        (n: { parentId: string | null; [key: string]: unknown }) => ({
-          ...n,
-          parentId: n.parentId || "goal-root",
-        })
-      );
-
-      addNodes(nodes);
-      if (data.values) addValues(data.values);
-      if (data.critique) setCritique(data.critique);
-    } catch (err) {
-      console.error("Failed to decompose:", err);
-      alert("Connection error. Please check your internet and try again.");
-      setHasStarted(false);
-    } finally {
-      setIsDecomposing(false);
-    }
-  }, [text, attachments, setGoalText, setHasStarted, setIsDecomposing, addNodes, addValues, setCritique]);
 
   const examples = [
     { text: "Build and launch an educational product for 3-5 year olds to help learn ABCs", icon: Gamepad2 },
@@ -213,29 +145,120 @@ export default function GoalInput() {
     { text: "Should I sell my $1.2M house in Hollywood and relocate to New York City?", icon: Home },
   ];
 
+  const startDecomposition = useCallback(
+    async (goal: string, values: string[], constraints: string[], extraContext?: string) => {
+      if (!goal.trim()) return;
+
+      let fullGoal = goal;
+      if (values.length > 0) {
+        fullGoal +=
+          `\n\n--- Values and priorities the user explicitly stated matter to them ---\n${values.join(", ")}\nWhen critiquing decisions, reference these stated values. Distinguish between values the user stated upfront vs. values you infer from their choices.`;
+      }
+
+      if (extraContext && extraContext.trim()) {
+        fullGoal += `\n\n--- Insights from cast personas ---\n${extraContext.trim()}`;
+      }
+
+      if (constraints.length > 0) {
+        useStore.getState().setConstraints(constraints);
+      }
+
+      setGoalText(goal);
+      setHasStarted(true);
+      setIsDecomposing(true);
+
+      addNodes([
+        {
+          id: "goal-root",
+          type: "goal",
+          label: goal.length > 60 ? goal.slice(0, 57) + "..." : goal,
+          description: goal,
+          parentId: null,
+          children: [],
+          status: "active",
+        },
+      ]);
+
+      try {
+        const data = await safeFetch("/api/decompose", { goal: fullGoal });
+
+        if (data.error) {
+          console.error("API error:", data.error);
+          alert("Something went wrong connecting to the AI. Please try again.\n\n" + data.error);
+          setIsDecomposing(false);
+          setHasStarted(false);
+          return;
+        }
+
+        const nodes = (data.nodes || []).map(
+          (n: { parentId: string | null;[key: string]: unknown }) => ({
+            ...n,
+            parentId: n.parentId || "goal-root",
+          }),
+        );
+
+        addNodes(nodes);
+        if (data.values) addValues(data.values);
+        if (data.critique) setCritique(data.critique);
+      } catch (err) {
+        console.error("Failed to decompose:", err);
+        alert("Connection error. Please check your internet and try again.");
+        setHasStarted(false);
+      } finally {
+        setIsDecomposing(false);
+      }
+    },
+    [setGoalText, setHasStarted, setIsDecomposing, addNodes, addValues, setCritique],
+  );
+
+  // When a cast persona finishes, combine its summary with Setup's extracted goal
+  // and start the tree decomposition with the enriched context.
+  const handleCastComplete = useCallback(
+    (_summary: string) => {
+      const goal = briefExtracted.goal || "";
+      const values = briefExtracted.values || [];
+      const constraints = briefExtracted.constraints || [];
+
+      // Pull summaries from every visited cast persona that has reached ready
+      const summaries: string[] = [];
+      for (const [pid, conv] of Object.entries(castConversations)) {
+        if (conv.ready && conv.summary) {
+          summaries.push(`[${pid}]: ${conv.summary}`);
+        }
+      }
+      const extraContext = summaries.join("\n");
+
+      setCurrentCastPersona(null);
+      startDecomposition(goal, values, constraints, extraContext);
+    },
+    [briefExtracted, castConversations, setCurrentCastPersona, startDecomposition],
+  );
+
   return (
     <div className="relative h-screen overflow-y-auto">
       <Starfield />
 
-      {/* Top right: language + theme */}
-      <div className="fixed top-4 right-4 z-30 flex items-center gap-2">
-        {/* Language picker */}
-        <select
-          value={useStore.getState().language}
-          onChange={(e) => useStore.getState().setLanguage(e.target.value as "en" | "zh" | "hi" | "es")}
-          className="bg-cosmos-surface/80 border border-cosmos-border rounded-lg px-1.5 py-1 text-xs text-cosmos-text focus:outline-none focus:border-cosmos-glow/50 cursor-pointer"
-          title="Language"
-        >
-          {LANGUAGES.map((l) => (
-            <option key={l.id} value={l.id}>
-              {l.label}
-            </option>
-          ))}
-        </select>
-        <div className="[&_button]:border-cosmos-glow/30 [&_button]:text-cosmos-text/70">
-          <ThemeSwitcher />
+      {/* Top right: language + theme. Hidden once the user enters Setup or
+          a cast persona, so the deliberation flow stays uncluttered. */}
+      {briefMessages.length === 0 && !currentCastPersona && (
+        <div className="fixed top-4 right-4 z-30 flex items-center gap-2">
+          <select
+            value={useStore.getState().language}
+            onChange={(e) => useStore.getState().setLanguage(e.target.value as "en" | "zh" | "hi" | "es")}
+            className="bg-cosmos-surface/80 border border-cosmos-border rounded-lg px-1.5 py-1 text-xs text-cosmos-text focus:outline-none focus:border-cosmos-glow/50 cursor-pointer"
+            title="Language"
+          >
+            {LANGUAGES.map((l) => (
+              <option key={l.id} value={l.id}>
+                {l.label}
+              </option>
+            ))}
+          </select>
+          <div className="[&_button]:border-cosmos-glow/30 [&_button]:text-cosmos-text/70">
+            <ThemeSwitcher />
+          </div>
         </div>
-      </div>
+      )}
 
       <motion.div
         className="relative z-10 flex items-center justify-center min-h-screen"
@@ -297,7 +320,7 @@ export default function GoalInput() {
             </div>
           </motion.div>
 
-          {/* About dropdowns — two tabs side by side */}
+          {/* About dropdowns */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -330,407 +353,184 @@ export default function GoalInput() {
               </button>
             </div>
 
-            {/* Dropdown 1: What is Cascade + How to use */}
             <AnimatePresence>
               {showWhat && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: "auto", opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.3 }}
-                    className="overflow-hidden"
-                  >
-                    <div className="mt-3 p-5 bg-cosmos-surface/60 backdrop-blur-sm border border-cosmos-border/40 rounded-2xl text-sm text-cosmos-muted leading-relaxed space-y-4 max-w-xl mx-auto">
-                      <div>
-                        <h3 className="text-cosmos-text font-medium text-xs uppercase tracking-wider mb-1.5">
-                          What is Cascade?
-                        </h3>
-                        <p>
-                          Cascade is a structured deliberation tool. You describe a complex goal or task, and the AI
-                          breaks it down into a decision tree of sub-decisions, consequences, dependencies, and paths
-                          you might not have considered.
-                        </p>
-                        <p className="mt-2">
-                          The difference from a typical AI conversation is what happens at decision points. Complex
-                          tasks are full of nuances and details that are easy to overlook or not even realize are there.
-                          Normally, AI just assumes or skips over these, and those silent assumptions can have real
-                          consequences downstream. In any complex goal, there will be moments where a decision comes
-                          down to tradeoffs and preferences, and those choices have a cascading effect on everything
-                          that follows. When the AI reaches one of those moments,
-                          <span className="text-cosmos-text"> it detects it, surfaces the conflict and tradeoffs, and
-                          brings it to you.</span> You make the judgment call. Your intent drives what happens next.
-                        </p>
-                        <p className="mt-2">
-                          As you work through decisions, a <span className="text-cosmos-text/80">Values Mirror</span> tracks
-                          what your choices reveal about your priorities and where they are in tension with each other.
-                          The tool also surfaces periodic reflections on patterns in how you are deciding. You can set
-                          constraints up front (budget, timeline, dealbreakers) so the AI factors them in throughout.
-                          When you are done, the output is a fully structured plan you can reference, document,
-                          or export as a prompt to build through your preferred AI tool.
-                        </p>
-                        <p className="mt-2 text-cosmos-muted/60 text-xs">
-                          There is a quick mode if you are short on time, but the standard experience is where
-                          Cascade is most useful. Taking the time to sit with each decision is the point.
-                        </p>
-                      </div>
-
-                      <div>
-                        <h3 className="text-cosmos-text font-medium text-xs uppercase tracking-wider mb-1.5">
-                          How to use it
-                        </h3>
-                        <ol className="space-y-2.5 text-cosmos-muted list-decimal list-inside">
-                          <li><span className="text-cosmos-text/80">Describe your goal or task</span> with as much detail and context as you can. The more specific you are about your situation, constraints, and who you are, the better the output.</li>
-                          <li>The AI breaks your goal down into a decision tree. Any point that requires a nuanced human call, something that depends on your values, intent, or priorities, gets flagged and brought back to you.</li>
-                          <li><span className="text-cosmos-judgment">Highlighted nodes</span> are those judgment points. Click <span className="text-cosmos-text/80">&ldquo;Decide now&rdquo;</span> to see the options, tradeoffs, blind spots, and what is at stake. You decide which direction to go.</li>
-                          <li>If none of the options fit, you can clarify your situation and redirect the AI. Your choices cascade forward, generating new branches and sometimes surfacing new conflicts.</li>
-                          <li>Once all decisions are resolved, the output is a fully laid out plan you can reference, document, or export as a prompt to build through your preferred AI tool.</li>
-                        </ol>
-                        <p className="mt-3 text-cosmos-muted/60 text-xs italic">
-                          Tip: Open the <span className="text-cosmos-text/70">Values Mirror</span> at any point to see what your decisions reveal about your priorities and how they connect to your choices.
-                        </p>
-                      </div>
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className="overflow-hidden"
+                >
+                  <div className="mt-3 p-5 bg-cosmos-surface/60 backdrop-blur-sm border border-cosmos-border/40 rounded-2xl text-sm text-cosmos-muted leading-relaxed space-y-4 max-w-xl mx-auto">
+                    <div>
+                      <h3 className="text-cosmos-text font-medium text-xs uppercase tracking-wider mb-1.5">
+                        What is Cascade?
+                      </h3>
+                      <p>
+                        Cascade is a structured deliberation tool. You describe a complex goal or task, and the AI
+                        breaks it down into a decision tree of sub-decisions, consequences, dependencies, and paths
+                        you might not have considered.
+                      </p>
+                      <p className="mt-2">
+                        The difference from a typical AI conversation is what happens at decision points. Complex
+                        tasks are full of nuances and details that are easy to overlook or not even realize are there.
+                        Normally, AI just assumes or skips over these, and those silent assumptions can have real
+                        consequences downstream. In any complex goal, there will be moments where a decision comes
+                        down to tradeoffs and preferences, and those choices have a cascading effect on everything
+                        that follows. When the AI reaches one of those moments,
+                        <span className="text-cosmos-text"> it detects it, surfaces the conflict and tradeoffs, and
+                        brings it to you.</span> You make the judgment call. Your intent drives what happens next.
+                      </p>
+                      <p className="mt-2">
+                        As you work through decisions, a <span className="text-cosmos-text/80">Values Mirror</span> tracks
+                        what your choices reveal about your priorities and where they are in tension with each other.
+                        The tool also surfaces periodic reflections on patterns in how you are deciding. You can set
+                        constraints up front (budget, timeline, dealbreakers) so the AI factors them in throughout.
+                        When you are done, the output is a fully structured plan you can reference, document,
+                        or export as a prompt to build through your preferred AI tool.
+                      </p>
+                      <p className="mt-2 text-cosmos-muted/60 text-xs">
+                        There is a quick mode if you are short on time, but the standard experience is where
+                        Cascade is most useful. Taking the time to sit with each decision is the point.
+                      </p>
                     </div>
-                  </motion.div>
-                )}
+
+                    <div>
+                      <h3 className="text-cosmos-text font-medium text-xs uppercase tracking-wider mb-1.5">
+                        How to use it
+                      </h3>
+                      <ol className="space-y-2.5 text-cosmos-muted list-decimal list-inside">
+                        <li><span className="text-cosmos-text/80">Setup will ask what you are trying to decide.</span> Give it as much detail and context as you want — a sentence or a paragraph both work. The more specific you are, the better the output.</li>
+                        <li>The AI breaks your goal down into a decision tree. Any point that requires a nuanced human call, something that depends on your values, intent, or priorities, gets flagged and brought back to you.</li>
+                        <li><span className="text-cosmos-judgment">Highlighted nodes</span> are those judgment points. Click <span className="text-cosmos-text/80">&ldquo;Decide now&rdquo;</span> to see the options, tradeoffs, blind spots, and what is at stake. You decide which direction to go.</li>
+                        <li>If none of the options fit, you can clarify your situation and redirect the AI. Your choices cascade forward, generating new branches and sometimes surfacing new conflicts.</li>
+                        <li>Once all decisions are resolved, the output is a fully laid out plan you can reference, document, or export as a prompt to build through your preferred AI tool.</li>
+                      </ol>
+                      <p className="mt-3 text-cosmos-muted/60 text-xs italic">
+                        Tip: Open the <span className="text-cosmos-text/70">Values Mirror</span> at any point to see what your decisions reveal about your priorities and how they connect to your choices.
+                      </p>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
             </AnimatePresence>
 
-            {/* Dropdown 2: Why it matters + citations */}
             <AnimatePresence>
               {showWhy && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: "auto", opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.3 }}
-                    className="overflow-hidden"
-                  >
-                    <div className="mt-3 p-5 bg-cosmos-surface/60 backdrop-blur-sm border border-cosmos-border/40 rounded-2xl text-sm text-cosmos-muted leading-relaxed space-y-3 max-w-xl mx-auto">
-                      <div>
-                        <h4 className="text-cosmos-text/70 text-xs font-medium mb-1">Two kinds of intelligence</h4>
-                        <p>
-                          The late Professor <a href="https://ischool.utoronto.ca/news/obituary-brian-cantwell-smith-1950-to-2025/" target="_blank" rel="noopener noreferrer" className="text-cosmos-text underline underline-offset-2 hover:text-cosmos-glow transition-colors">Brian Cantwell Smith</a> identified
-                          two distinct kinds of intelligence. The first is <em>reckoning</em>: calculative rationality,
-                          pattern recognition, decomposition, logical inference. This is what AI does well, and it
-                          keeps getting better at it. The second is <em>judgment</em>: deliberative thought that is
-                          grounded in ethical commitment and a sense of responsibility to the situation
-                          you&apos;re in.
-                        </p>
-                      </div>
-
-                      <div>
-                        <h4 className="text-cosmos-text/70 text-xs font-medium mb-1">What judgment requires</h4>
-                        <p>
-                          Judgment isn&apos;t about what <em>can</em> be done. It&apos;s about
-                          what <em>should</em> be done, and being willing to stand behind that call. This capacity
-                          is uniquely human &mdash; it comes from lived experience, caring about outcomes, and
-                          understanding what&apos;s at stake for the people involved.
-                          Smith&apos;s argument was that AI will produce world-changing reckoning systems, but nothing
-                          in AI today comes close to what genuine judgment requires.
-                        </p>
-                      </div>
-
-                      <div>
-                        <h4 className="text-cosmos-text/70 text-xs font-medium mb-1">Why AI can&apos;t replace it</h4>
-                        <p>
-                          AI doesn&apos;t have skin in the game. It has no stake in the outcome, no responsibility
-                          to the people affected, no consequences to live with.
-                          <a href="https://www.theguardian.com/technology/2023/jul/25/joseph-weizenbaum-inventor-eliza-chatbot-turned-against-artificial-intelligence-ai" target="_blank" rel="noopener noreferrer" className="text-cosmos-text underline underline-offset-2 hover:text-cosmos-glow transition-colors"> Joseph Weizenbaum</a> arrived at a similar conclusion
-                          in the 1970s: the moral dimension of a decision is not something you can hand off to a machine.
-                        </p>
-                      </div>
-
-                      <div>
-                        <h4 className="text-cosmos-text/70 text-xs font-medium mb-1">Where Cascade fits</h4>
-                        <p>
-                          Cascade is built on that distinction. The AI does the reckoning. The human decides
-                          what matters, weighs the tradeoffs, and exercises the judgment that carries real consequences.
-                        </p>
-                      </div>
-
-                      <div className="text-[11px] text-cosmos-muted/50 pt-3 border-t border-cosmos-border/20 space-y-1.5">
-                        <p className="text-cosmos-text/50 text-[10px] uppercase tracking-wider font-medium">Inspired by</p>
-                        <p>
-                          <a href="https://www.youtube.com/watch?v=8t5Jg7PthFI" target="_blank" rel="noopener noreferrer" className="text-cosmos-glow/70 hover:text-cosmos-glow underline underline-offset-2 transition-colors">Smith, B. C. (2020). <em>Reckoning and Judgement: The Promise of AI.</em></a>
-                        </p>
-                        <p>
-                          Weizenbaum, J. (1976). <em>Computer Power and Human Reason.</em>
-                        </p>
-                        <p className="text-cosmos-text/50 text-[10px] uppercase tracking-wider font-medium pt-2">Recommended read</p>
-                        <p>
-                          <a href="https://www.theatlantic.com/technology/2026/02/words-without-consequence/685974/" target="_blank" rel="noopener noreferrer" className="text-cosmos-glow/70 hover:text-cosmos-glow underline underline-offset-2 transition-colors">Roy, D. (2026). &ldquo;Words Without Consequence.&rdquo; <em>The Atlantic.</em></a>
-                        </p>
-                      </div>
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className="overflow-hidden"
+                >
+                  <div className="mt-3 p-5 bg-cosmos-surface/60 backdrop-blur-sm border border-cosmos-border/40 rounded-2xl text-sm text-cosmos-muted leading-relaxed space-y-3 max-w-xl mx-auto">
+                    <div>
+                      <h4 className="text-cosmos-text/70 text-xs font-medium mb-1">Two kinds of intelligence</h4>
+                      <p>
+                        The late Professor <a href="https://ischool.utoronto.ca/news/obituary-brian-cantwell-smith-1950-to-2025/" target="_blank" rel="noopener noreferrer" className="text-cosmos-text underline underline-offset-2 hover:text-cosmos-glow transition-colors">Brian Cantwell Smith</a> identified
+                        two distinct kinds of intelligence. The first is <em>reckoning</em>: calculative rationality,
+                        pattern recognition, decomposition, logical inference. This is what AI does well, and it
+                        keeps getting better at it. The second is <em>judgment</em>: deliberative thought that is
+                        grounded in ethical commitment and a sense of responsibility to the situation
+                        you&apos;re in.
+                      </p>
                     </div>
-                  </motion.div>
-                )}
+
+                    <div>
+                      <h4 className="text-cosmos-text/70 text-xs font-medium mb-1">What judgment requires</h4>
+                      <p>
+                        Judgment isn&apos;t about what <em>can</em> be done. It&apos;s about
+                        what <em>should</em> be done, and being willing to stand behind that call. This capacity
+                        is uniquely human &mdash; it comes from lived experience, caring about outcomes, and
+                        understanding what&apos;s at stake for the people involved.
+                        Smith&apos;s argument was that AI will produce world-changing reckoning systems, but nothing
+                        in AI today comes close to what genuine judgment requires.
+                      </p>
+                    </div>
+
+                    <div>
+                      <h4 className="text-cosmos-text/70 text-xs font-medium mb-1">Why AI can&apos;t replace it</h4>
+                      <p>
+                        AI doesn&apos;t have skin in the game. It has no stake in the outcome, no responsibility
+                        to the people affected, no consequences to live with.
+                        <a href="https://www.theguardian.com/technology/2023/jul/25/joseph-weizenbaum-inventor-eliza-chatbot-turned-against-artificial-intelligence-ai" target="_blank" rel="noopener noreferrer" className="text-cosmos-text underline underline-offset-2 hover:text-cosmos-glow transition-colors"> Joseph Weizenbaum</a> arrived at a similar conclusion
+                        in the 1970s: the moral dimension of a decision is not something you can hand off to a machine.
+                      </p>
+                    </div>
+
+                    <div>
+                      <h4 className="text-cosmos-text/70 text-xs font-medium mb-1">Where Cascade fits</h4>
+                      <p>
+                        Cascade is built on that distinction. The AI does the reckoning. The human decides
+                        what matters, weighs the tradeoffs, and exercises the judgment that carries real consequences.
+                      </p>
+                    </div>
+
+                    <div className="text-[11px] text-cosmos-muted/50 pt-3 border-t border-cosmos-border/20 space-y-1.5">
+                      <p className="text-cosmos-text/50 text-[10px] uppercase tracking-wider font-medium">Inspired by</p>
+                      <p>
+                        <a href="https://www.youtube.com/watch?v=8t5Jg7PthFI" target="_blank" rel="noopener noreferrer" className="text-cosmos-glow/70 hover:text-cosmos-glow underline underline-offset-2 transition-colors">Smith, B. C. (2020). <em>Reckoning and Judgement: The Promise of AI.</em></a>
+                      </p>
+                      <p>
+                        Weizenbaum, J. (1976). <em>Computer Power and Human Reason.</em>
+                      </p>
+                      <p className="text-cosmos-text/50 text-[10px] uppercase tracking-wider font-medium pt-2">Recommended read</p>
+                      <p>
+                        <a href="https://www.theatlantic.com/technology/2026/02/words-without-consequence/685974/" target="_blank" rel="noopener noreferrer" className="text-cosmos-glow/70 hover:text-cosmos-glow underline underline-offset-2 transition-colors">Roy, D. (2026). &ldquo;Words Without Consequence.&rdquo; <em>The Atlantic.</em></a>
+                      </p>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
             </AnimatePresence>
           </motion.div>
 
-          {/* Mode picker */}
+          {/* Mode picker (Tree / Notebook / Dialogue) */}
           <ModePicker />
 
-          {/* Input */}
+          {/* Standard / Quick — small mode selector above Setup */}
+          <div className="mb-3 flex items-center justify-end gap-2">
+            <span className="text-[10px] text-cosmos-muted/40 uppercase tracking-wider mr-1">
+              Depth
+            </span>
+            <button
+              onClick={() => useStore.getState().setQuickMode(false)}
+              className={`px-2.5 py-1 text-[11px] rounded-lg border transition-all ${
+                !useStore.getState().quickMode
+                  ? "bg-cosmos-glow/15 border-cosmos-glow/40 text-cosmos-glow"
+                  : "border-cosmos-border/30 text-cosmos-muted/50 hover:border-cosmos-glow/20 hover:text-cosmos-muted"
+              }`}
+            >
+              Standard
+            </button>
+            <button
+              onClick={() => useStore.getState().setQuickMode(true)}
+              className={`px-2.5 py-1 text-[11px] rounded-lg border transition-all ${
+                useStore.getState().quickMode
+                  ? "bg-cosmos-muted/15 border-cosmos-muted/30 text-cosmos-muted"
+                  : "border-cosmos-border/30 text-cosmos-muted/50 hover:border-cosmos-muted/20 hover:text-cosmos-muted"
+              }`}
+            >
+              Quick
+            </button>
+          </div>
+
+          {/* Setup persona — replaces the textarea entry */}
           <motion.div
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.6, duration: 0.8 }}
           >
-            <div className="relative glow-input rounded-2xl">
-              <textarea
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSubmit();
-                  }
-                }}
-                placeholder="Describe a goal or task you're working on. What are you trying to accomplish, who are you, and what's the context?"
-                className="w-full bg-cosmos-surface/80 backdrop-blur-sm border border-cosmos-border rounded-2xl px-6 py-5 pr-14 text-base text-cosmos-text placeholder:text-cosmos-muted/40 focus:outline-none focus:border-cosmos-glow/50 resize-none transition-all duration-300 font-sans"
-                rows={4}
-                autoFocus
-              />
-
-              {/* Attach & Mic buttons */}
-              <div className="absolute top-4 right-4 flex flex-col items-center gap-1">
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="p-2 text-cosmos-muted/40 hover:text-cosmos-glow transition-colors rounded-lg hover:bg-cosmos-glow/10"
-                  title="Add any attachments for context"
-                >
-                  <Paperclip className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={toggleRecording}
-                  className={`p-2 rounded-lg transition-colors ${
-                    isRecording
-                      ? "text-cosmos-conflict bg-cosmos-conflict/15 animate-pulse"
-                      : "text-cosmos-muted/40 hover:text-cosmos-glow hover:bg-cosmos-glow/10"
-                  }`}
-                  title={isRecording ? "Stop recording" : "Speak your idea"}
-                >
-                  {isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-                </button>
-              </div>
-              <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                accept=".txt,.md,.csv,.json,.pdf,.doc,.docx"
-                onChange={handleFileUpload}
-                className="hidden"
-              />
-
-              {/* Submit button */}
-              <button
-                onClick={handleSubmit}
-                disabled={!text.trim()}
-                className="absolute bottom-4 right-4 px-5 py-2.5 bg-cosmos-glow/20 border border-cosmos-glow/30 rounded-xl text-cosmos-glow text-sm font-medium hover:bg-cosmos-glow/30 hover:border-cosmos-glow/50 transition-all disabled:opacity-20 disabled:cursor-not-allowed flex items-center gap-2 group"
-              >
-                Begin
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-              </button>
-            </div>
-
-            {/* Attachments list */}
-            {attachments.length > 0 && (
-              <div className="mt-3 flex flex-wrap gap-2">
-                {attachments.map((a, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-cosmos-glow/10 border border-cosmos-glow/20 rounded-lg text-xs text-cosmos-glow"
-                  >
-                    <Paperclip className="w-3 h-3" />
-                    {a.name}
-                    <button
-                      onClick={() => removeAttachment(i)}
-                      className="ml-1 hover:text-cosmos-conflict transition-colors"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Values & Constraints + Standard/Quick mode — same row */}
-            <div className="mt-5">
-              <div className="flex items-center justify-between">
-                <button
-                  onClick={() => setShowValues(!showValues)}
-                  className="flex items-center gap-2 text-sm text-cosmos-text/80 hover:text-cosmos-glow transition-colors"
-                >
-                  <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${showValues ? "rotate-180" : ""}`} />
-                  <span className="font-medium">Values &amp; constraints</span>
-                  {(statedValues.length > 0 || constraints.length > 0) && (
-                    <span className="text-cosmos-glow text-xs">
-                      ({statedValues.length + constraints.length})
-                    </span>
-                  )}
-                </button>
-
-                {/* Standard / Quick toggle */}
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => useStore.getState().setQuickMode(false)}
-                    className={`px-2.5 py-1 text-[11px] rounded-lg border transition-all ${
-                      !useStore.getState().quickMode
-                        ? "bg-cosmos-glow/15 border-cosmos-glow/40 text-cosmos-glow"
-                        : "border-cosmos-border/30 text-cosmos-muted/50 hover:border-cosmos-glow/20 hover:text-cosmos-muted"
-                    }`}
-                  >
-                    Standard
-                  </button>
-                  <button
-                    onClick={() => useStore.getState().setQuickMode(true)}
-                    className={`px-2.5 py-1 text-[11px] rounded-lg border transition-all ${
-                      useStore.getState().quickMode
-                        ? "bg-cosmos-muted/15 border-cosmos-muted/30 text-cosmos-muted"
-                        : "border-cosmos-border/30 text-cosmos-muted/50 hover:border-cosmos-muted/20 hover:text-cosmos-muted"
-                    }`}
-                  >
-                    Quick
-                  </button>
-                </div>
-              </div>
-
-              <AnimatePresence>
-                {showValues && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: "auto", opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.2 }}
-                    className="overflow-hidden"
-                  >
-                    <div className="mt-3 p-4 bg-cosmos-surface/50 border border-cosmos-border/30 rounded-xl space-y-4">
-                      {/* Values */}
-                      <div>
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="text-[10px] text-cosmos-glow/70 uppercase tracking-wider font-medium">What you value</span>
-                          <span className="text-[10px] text-cosmos-muted/40">priorities that guide your tradeoffs</span>
-                        </div>
-                        <div className="flex flex-wrap gap-1.5 mb-2">
-                          {suggestedValues.map((v) => (
-                            <button
-                              key={v}
-                              onClick={() => toggleValue(v)}
-                              className={`px-2 py-0.5 text-[10px] rounded-md border transition-all ${
-                                statedValues.includes(v)
-                                  ? "bg-cosmos-glow/15 border-cosmos-glow/40 text-cosmos-glow"
-                                  : "border-cosmos-border/30 text-cosmos-muted/40 hover:border-cosmos-glow/20 hover:text-cosmos-muted"
-                              }`}
-                            >
-                              {v}
-                            </button>
-                          ))}
-                        </div>
-                        <div className="flex gap-2">
-                          <input
-                            value={customValue}
-                            onChange={(e) => setCustomValue(e.target.value)}
-                            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustomValue(); } }}
-                            placeholder="Add a value..."
-                            className="flex-1 bg-cosmos-bg/50 border border-cosmos-border/30 rounded-lg px-3 py-1.5 text-xs text-cosmos-text placeholder:text-cosmos-muted/30 focus:outline-none focus:border-cosmos-glow/30"
-                          />
-                          <button
-                            onClick={addCustomValue}
-                            disabled={!customValue.trim()}
-                            className="px-3 py-1.5 text-xs text-cosmos-glow/60 border border-cosmos-border/30 rounded-lg hover:bg-cosmos-glow/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-                          >
-                            Add
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Constraints */}
-                      <div>
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="text-[10px] text-cosmos-conflict/70 uppercase tracking-wider font-medium">Constraints</span>
-                          <span className="text-[10px] text-cosmos-muted/40">budget, timeline, dealbreakers</span>
-                        </div>
-                        <div className="flex gap-2">
-                          <input
-                            value={customConstraint}
-                            onChange={(e) => setCustomConstraint(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") {
-                                e.preventDefault();
-                                const trimmed = customConstraint.trim();
-                                if (trimmed && !constraints.includes(trimmed)) {
-                                  setConstraints((prev) => [...prev, trimmed]);
-                                  setCustomConstraint("");
-                                }
-                              }
-                            }}
-                            placeholder="e.g., Budget under $50k, Must launch by June, US only..."
-                            className="flex-1 bg-cosmos-bg/50 border border-cosmos-border/30 rounded-lg px-3 py-1.5 text-xs text-cosmos-text placeholder:text-cosmos-muted/30 focus:outline-none focus:border-cosmos-conflict/30"
-                          />
-                          <button
-                            onClick={() => {
-                              const trimmed = customConstraint.trim();
-                              if (trimmed && !constraints.includes(trimmed)) {
-                                setConstraints((prev) => [...prev, trimmed]);
-                                setCustomConstraint("");
-                              }
-                            }}
-                            disabled={!customConstraint.trim()}
-                            className="px-3 py-1.5 text-xs text-cosmos-conflict/60 border border-cosmos-border/30 rounded-lg hover:bg-cosmos-conflict/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-                          >
-                            Add
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Selected values & constraints pills */}
-                      {(statedValues.length > 0 || constraints.length > 0) && (
-                        <div className="flex flex-wrap gap-1.5 pt-2 border-t border-cosmos-border/20">
-                          {statedValues.map((v) => (
-                            <span
-                              key={v}
-                              className="flex items-center gap-1 px-2 py-0.5 text-[10px] bg-cosmos-glow/10 border border-cosmos-glow/25 rounded-full text-cosmos-glow"
-                            >
-                              {v}
-                              <button onClick={() => toggleValue(v)} className="hover:text-cosmos-conflict transition-colors">
-                                <X className="w-2.5 h-2.5" />
-                              </button>
-                            </span>
-                          ))}
-                          {constraints.map((c) => (
-                            <span
-                              key={c}
-                              className="flex items-center gap-1 px-2 py-0.5 text-[10px] bg-cosmos-conflict/10 border border-cosmos-conflict/25 rounded-full text-cosmos-conflict/80"
-                            >
-                              {c}
-                              <button onClick={() => setConstraints((prev) => prev.filter((x) => x !== c))} className="hover:text-cosmos-conflict transition-colors">
-                                <X className="w-2.5 h-2.5" />
-                              </button>
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-
-            {/* Example prompts */}
-            <div className="mt-5 flex flex-wrap gap-3 justify-center">
-              {examples.map(({ text: ex, icon: Icon }) => (
-                <button
-                  key={ex}
-                  onClick={() => setText(ex)}
-                  className="flex items-center gap-2 px-4 py-2 text-xs text-cosmos-muted border border-cosmos-border/60 rounded-xl hover:border-cosmos-glow/30 hover:text-cosmos-glow hover:bg-cosmos-glow/5 transition-all"
-                >
-                  <Icon className="w-3.5 h-3.5" />
-                  {ex}
-                </button>
-              ))}
-            </div>
+            <SetupPanel
+              onReady={startDecomposition}
+              onSummonPersona={(id) => setCurrentCastPersona(id)}
+              examples={examples}
+            />
           </motion.div>
 
-          {/* Forest, Gallery & Session links — single row */}
+          {/* Forest, Gallery & Session links */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -810,6 +610,23 @@ export default function GoalInput() {
           </motion.div>
         </div>
       </motion.div>
+
+      {/* Cast persona room — opens on top of SetupPanel when a persona is summoned */}
+      {currentCastPersona && (() => {
+        const rec = recommendedPersonas.find((p) => p.id === currentCastPersona);
+        if (!rec) return null;
+        const config = buildCastPersonaConfig(rec, briefExtracted.goal || "");
+        // The key forces a remount when persona changes, so the on-mount
+        // effect (markCastVisited + opening message seed) re-fires.
+        return (
+          <CastPersonaPanel
+            key={config.id}
+            persona={config}
+            onComplete={handleCastComplete}
+            onClose={() => setCurrentCastPersona(null)}
+          />
+        );
+      })()}
     </div>
   );
 }
