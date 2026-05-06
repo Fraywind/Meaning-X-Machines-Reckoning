@@ -22,9 +22,21 @@ export default function Home() {
   // Initialize theme and view mode from localStorage on mount
   useEffect(() => {
     try {
+      // One-time migration: when the default theme switched from starfield
+      // to nature, users with a persisted "starfield" value (the prior
+      // default) get migrated once to nature. The migration flag prevents
+      // re-running so users who deliberately re-pick starfield keep it.
+      const migrated = localStorage.getItem("reckoning-theme-migrated-v2");
       const stored = localStorage.getItem("reckoning-theme");
-      if (stored === "starfield" || stored === "cybernetics" || stored === "light" || stored === "cute" || stored === "nature") {
-        useStore.getState().setTheme(stored);
+      if (!migrated && stored === "starfield") {
+        localStorage.setItem("reckoning-theme", "nature");
+        localStorage.setItem("reckoning-theme-migrated-v2", "1");
+        useStore.getState().setTheme("nature");
+      } else {
+        if (!migrated) localStorage.setItem("reckoning-theme-migrated-v2", "1");
+        if (stored === "starfield" || stored === "cybernetics" || stored === "light" || stored === "cute" || stored === "nature") {
+          useStore.getState().setTheme(stored);
+        }
       }
       const storedMode = localStorage.getItem("reckoning-view-mode");
       if (
