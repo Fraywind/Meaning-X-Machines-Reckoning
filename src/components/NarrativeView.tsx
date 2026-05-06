@@ -6,6 +6,7 @@ import { X, Loader2, Volume2, VolumeX, RefreshCw } from "lucide-react";
 import { useStore } from "@/store/useStore";
 import { safeFetch } from "@/lib/api";
 import { useTextToSpeech, getVoiceProfile } from "@/lib/useTextToSpeech";
+import CastCurtainCall from "./CastCurtainCall";
 
 interface Props {
   onClose: () => void;
@@ -128,6 +129,9 @@ export default function NarrativeView({ onClose }: Props) {
         </div>
 
         <div className="max-w-2xl mx-auto px-6 md:px-10 py-16">
+          {/* Curtain call: the cast bows before the story begins. */}
+          <CastCurtainCall />
+
           <div className="text-[10px] text-cosmos-muted/55 uppercase tracking-[0.3em] mb-2">
             Mapping this territory
           </div>
