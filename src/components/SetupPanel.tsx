@@ -313,13 +313,30 @@ function ReadyActions({
   castConversations,
   onOpenTree,
   onSummonPersona,
+  onAddCustomExpert,
 }: {
   briefExtracted: { goal: string | null; values: string[]; constraints: string[] };
   recommendedPersonas: { id: string; name: string; role: string; archetype: string }[];
   castConversations: Record<string, { ready: boolean }>;
   onOpenTree: () => void;
   onSummonPersona: (id: string) => void;
+  onAddCustomExpert: (description: string) => Promise<void>;
 }) {
+  const [customOpen, setCustomOpen] = useState(false);
+  const [customInput, setCustomInput] = useState("");
+  const [customLoading, setCustomLoading] = useState(false);
+  const submitCustom = async () => {
+    const t = customInput.trim();
+    if (!t || customLoading) return;
+    setCustomLoading(true);
+    try {
+      await onAddCustomExpert(t);
+      setCustomInput("");
+      setCustomOpen(false);
+    } finally {
+      setCustomLoading(false);
+    }
+  };
   const MIN_PERSONAS = 2;
   const completedCount = Object.values(castConversations).filter((c) => c.ready).length;
   const gateOpen = completedCount >= MIN_PERSONAS;
@@ -409,6 +426,59 @@ function ReadyActions({
                 </button>
               );
             })}
+          </div>
+          {/* Custom SME: user describes a specific expert they want to talk
+              to and the persona is added to the cast with a generated dossier. */}
+          <div className="pt-2 border-t border-cosmos-glow/15">
+            {!customOpen ? (
+              <button
+                onClick={() => setCustomOpen(true)}
+                className="w-full text-left text-[11px] text-cosmos-muted/70 hover:text-cosmos-glow/80 transition-colors py-1"
+              >
+                + Add a specific expert
+              </button>
+            ) : (
+              <div className="space-y-2">
+                <div className="text-[10px] text-cosmos-muted/60 uppercase tracking-wider">
+                  Describe the expert you want to talk to
+                </div>
+                <textarea
+                  value={customInput}
+                  onChange={(e) => setCustomInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      submitCustom();
+                    }
+                  }}
+                  placeholder="e.g. a developmental pediatrician who has worked with kids on the autism spectrum"
+                  rows={2}
+                  disabled={customLoading}
+                  className="w-full bg-cosmos-bg/50 border border-cosmos-border/50 rounded-lg px-2.5 py-2 text-[12px] text-cosmos-text placeholder:text-cosmos-muted/40 focus:outline-none focus:border-cosmos-glow/40 resize-none disabled:opacity-50"
+                  autoFocus
+                />
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={submitCustom}
+                    disabled={!customInput.trim() || customLoading}
+                    className="px-3 py-1.5 text-[11px] bg-cosmos-glow/15 border border-cosmos-glow/35 rounded-lg text-cosmos-glow hover:bg-cosmos-glow/25 transition-all disabled:opacity-30 disabled:cursor-not-allowed inline-flex items-center gap-1.5"
+                  >
+                    {customLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+                    {customLoading ? "Building..." : "Add to cast"}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setCustomOpen(false);
+                      setCustomInput("");
+                    }}
+                    disabled={customLoading}
+                    className="text-[11px] text-cosmos-muted/50 hover:text-cosmos-muted transition-colors disabled:opacity-30"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       ) : (
@@ -647,6 +717,50 @@ export default function SetupPanel({ onReady, onSummonPersona, examples }: Props
     );
   };
 
+  // User-specified Subject Matter Expert. Calls the custom-persona endpoint
+  // to generate a full dossier from the description, then appends to the
+  // recommendedPersonas list so the user can summon them like any other.
+  const addCustomExpert = async (description: string) => {
+    try {
+      const data = await safeFetch("/api/custom-persona", {
+        description,
+        goal: briefExtracted.goal || "",
+        language,
+      });
+      if (data.error || !data.id || !data.name) {
+        addBriefMessage({
+          role: "setup",
+          content: "I had trouble building that expert. Try describing them slightly differently.",
+        });
+        return;
+      }
+      // Avoid duplicate ids if the user adds two similar experts.
+      let id: string = data.id;
+      let n = 2;
+      while (recommendedPersonas.some((p) => p.id === id)) {
+        id = `${data.id}-${n++}`;
+      }
+      const newPersona = {
+        id,
+        name: data.name,
+        role: typeof data.role === "string" ? data.role : "",
+        archetype: "expert",
+        expertise: typeof data.expertise === "string" ? data.expertise : undefined,
+        pushFor: typeof data.pushFor === "string" ? data.pushFor : undefined,
+        vocabulary: Array.isArray(data.vocabulary)
+          ? data.vocabulary.filter((v: unknown) => typeof v === "string").slice(0, 12)
+          : undefined,
+      };
+      setRecommendedPersonas([...recommendedPersonas, newPersona]);
+    } catch (err) {
+      console.error("Custom persona failed:", err);
+      addBriefMessage({
+        role: "setup",
+        content: "Connection issue while building that expert. Try again in a moment.",
+      });
+    }
+  };
+
   const handleSkipAhead = () => {
     const userText = briefMessages
       .filter((m) => m.role === "user")
@@ -807,6 +921,7 @@ export default function SetupPanel({ onReady, onSummonPersona, examples }: Props
                         castConversations={castConversations}
                         onOpenTree={handleOpenTree}
                         onSummonPersona={onSummonPersona}
+                        onAddCustomExpert={addCustomExpert}
                       />
                     )}
                   </div>

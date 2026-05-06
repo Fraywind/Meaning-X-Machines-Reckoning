@@ -483,6 +483,39 @@ ${crossCheckSpec}
 When ready=true (after 3-6 substantive turns OR if user explicitly says they're done), set "summary" to a 1-2 sentence summary of the key vulnerabilities or assumptions the user grappled with. This goes into the tree analysis later.${buildLanguageInstruction(language)}`;
 }
 
+export function buildCustomPersonaPrompt(
+  description: string,
+  goal: string,
+  language: AppLanguage = "en",
+): string {
+  return `You are creating a Subject Matter Expert (SME) persona for Cascade based on a USER-PROVIDED description. The user wants to add this expert to their cast of personas alongside the universal personas (Skeptic, Pragmatist, Stress Test) that are already there.
+
+USER'S CURRENT GOAL (for context, may be empty):
+"${goal}"
+
+USER'S DESCRIPTION OF THE EXPERT THEY WANT TO TALK TO:
+"${description}"
+
+Convert that description into a fully-formed expert persona with a real domain dossier. The dossier focuses Claude's attention on the specific concepts, vocabulary, and push angles a real practitioner of this kind would think in. A persona without a real dossier reads as a generic AI in costume, which is exactly what we are trying to avoid.
+
+Output ONLY valid JSON in this exact shape:
+{
+  "id": "<kebab-case slug derived from the name; if the user named a generic 'doctor', use a more specific slug like 'pediatric-cardiologist' if implied>",
+  "name": "<short capitalized name, max 4 words. E.g. 'Pediatric SLP', 'Tax Attorney', 'NICU Nurse'>",
+  "role": "<1 short sentence, sentence-case, ending with a period. The user-readable label that appears under the avatar. E.g. 'Speech-language pathologist who has worked with autistic children for 12 years.'>",
+  "archetype": "expert",
+  "expertise": "<2-3 sentences naming the SPECIFIC body of knowledge this persona has: concepts they think in, the load-bearing distinctions in this field, what they actually pay attention to. Use real domain terms with names. Avoid generic platitudes.>",
+  "pushFor": "<2-3 sentences on what THIS expert would push THIS user on, given the user's stated goal. Concrete and specific to the goal.>",
+  "vocabulary": ["<5-8 specific terms or concepts this persona would naturally use in conversation. Real domain vocabulary, not generic terms.>"]
+}
+
+Rules for the SME persona:
+- The expert MUST be specific. If the description is vague ('a doctor'), pick a specific specialty implied by the user's goal. If the goal is ed-tech for kids, a 'doctor' becomes a 'developmental pediatrician'. If the user is genuinely vague and the goal is unclear, prefer the closest reasonable specialization rather than 'general expert'.
+- The expert MUST be plausible. If the user describes 'a 200-year-old wizard who is also a dentist', tone it down to the closest serious version (a long-experienced dentist) and ignore the fantasy element. The user is trying to talk to a real practitioner, not a roleplay character.
+- The expert uses domain-specific terminology naturally in their vocabulary list. They will explain terms only when the user signals confusion AND the term is genuinely complex AND it is load-bearing for the decision (this rule is enforced in the runtime persona prompt; you only need to provide the vocabulary).
+- Do NOT include any other fields beyond the schema above. Do not add commentary outside the JSON.${buildLanguageInstruction(language)}`;
+}
+
 export function buildCounterfactualPrompt(
   goal: string,
   node: DecisionNode,

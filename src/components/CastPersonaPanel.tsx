@@ -2,11 +2,12 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, Send, Loader2, X, Mic, MicOff } from "lucide-react";
+import { ArrowRight, Send, Loader2, X, Mic, MicOff, Volume2, VolumeX } from "lucide-react";
 import { useStore, BriefMessage, PersonaConcern } from "@/store/useStore";
 import { safeFetch } from "@/lib/api";
 import { getLanguageConfig } from "@/lib/i18n";
 import { getPersonaColors, PersonaColorSet } from "@/lib/personaColors";
+import { useTextToSpeech, getVoiceProfile } from "@/lib/useTextToSpeech";
 import PersonaStrip from "./PersonaStrip";
 
 export interface CastPersonaConfig {
@@ -37,12 +38,18 @@ function Bubble({
   onChipClick,
   disabled,
   colors,
+  onSpeak,
+  isSpeaking,
+  ttsSupported,
 }: {
   message: BriefMessage;
   isLatest: boolean;
   onChipClick: (text: string) => void;
   disabled: boolean;
   colors: PersonaColorSet;
+  onSpeak?: () => void;
+  isSpeaking?: boolean;
+  ttsSupported?: boolean;
 }) {
   const isPersona = message.role === "setup";
   const [showChips, setShowChips] = useState(false);
@@ -65,7 +72,7 @@ function Bubble({
       transition={{ duration: 0.25 }}
       className="space-y-2"
     >
-      <div className={`flex ${isPersona ? "justify-start" : "justify-end"}`}>
+      <div className={`flex ${isPersona ? "justify-start" : "justify-end"} items-end gap-1.5`}>
         <div
           className={`max-w-[85%] px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed ${
             isPersona
@@ -75,6 +82,20 @@ function Bubble({
         >
           {message.content}
         </div>
+        {isPersona && ttsSupported && onSpeak && (
+          <button
+            onClick={onSpeak}
+            aria-label={isSpeaking ? "Stop speaking" : "Listen"}
+            className={`flex-shrink-0 p-1.5 rounded-full transition-all ${
+              isSpeaking
+                ? `${colors.sendBg} ${colors.sendText}`
+                : `text-cosmos-muted/40 hover:${colors.sendText} hover:${colors.bubbleBg}`
+            }`}
+            title={isSpeaking ? "Stop" : "Read aloud"}
+          >
+            {isSpeaking ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+          </button>
+        )}
       </div>
 
       {isPersona && isLatest && message.options && message.options.length > 0 && (
@@ -187,19 +208,13 @@ export default function CastPersonaPanel({ persona, onComplete, onClose }: Props
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages.length, loading]);
 
-  const toggleRecording = useCallback(() => {
-    if (isRecording) {
-      recognitionRef.current?.stop();
-      setIsRecording(false);
-      return;
-    }
-
+  const startRecording = useCallback(() => {
+    if (isRecording) return;
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) {
-      alert("Voice input isn't supported in this browser. Try Chrome or Edge.");
+      alert("Voice input isn't supported in this browser. Try Chrome, Edge, or Safari.");
       return;
     }
-
     const recognition = new SR();
     recognition.continuous = true;
     recognition.interimResults = true;
@@ -232,6 +247,57 @@ export default function CastPersonaPanel({ persona, onComplete, onClose }: Props
     recognition.start();
     setIsRecording(true);
   }, [isRecording, language]);
+
+  const stopRecording = useCallback(() => {
+    if (!isRecording) return;
+    recognitionRef.current?.stop();
+    setIsRecording(false);
+  }, [isRecording]);
+
+  const toggleRecording = useCallback(() => {
+    if (isRecording) stopRecording();
+    else startRecording();
+  }, [isRecording, startRecording, stopRecording]);
+
+  // Push-to-talk: hold Space anywhere in the panel to record. Released = stop.
+  // Ignored when the user is typing (input/textarea focused) so spacebar still
+  // works to insert a space inside text fields.
+  const pttActiveRef = useRef(false);
+  const startRecRef = useRef(startRecording);
+  const stopRecRef = useRef(stopRecording);
+  const isRecRef = useRef(isRecording);
+  useEffect(() => { startRecRef.current = startRecording; }, [startRecording]);
+  useEffect(() => { stopRecRef.current = stopRecording; }, [stopRecording]);
+  useEffect(() => { isRecRef.current = isRecording; }, [isRecording]);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.code !== "Space" || e.repeat) return;
+      const t = e.target as HTMLElement | null;
+      if (t) {
+        const tag = t.tagName;
+        if (tag === "INPUT" || tag === "TEXTAREA" || (t as HTMLElement).isContentEditable) return;
+      }
+      e.preventDefault();
+      if (!isRecRef.current) {
+        pttActiveRef.current = true;
+        startRecRef.current();
+      }
+    };
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (e.code !== "Space") return;
+      if (pttActiveRef.current) {
+        pttActiveRef.current = false;
+        stopRecRef.current();
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    document.addEventListener("keyup", onKeyUp);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("keyup", onKeyUp);
+    };
+  }, []);
 
   const sendTurn = async (overrideText?: string) => {
     const text = (overrideText ?? input).trim();
@@ -362,6 +428,53 @@ export default function CastPersonaPanel({ persona, onComplete, onClose }: Props
   const Character = persona.CharacterComponent;
   const colors = getPersonaColors(persona.archetype);
 
+  // TTS: shared instance per panel (only one bubble can speak at a time).
+  // The voice profile is keyed off archetype, the voice itself off persona.id
+  // so different domain experts in the same gender bucket get distinct voices.
+  const tts = useTextToSpeech();
+  const voiceProfile = getVoiceProfile(persona.archetype);
+  const [speakingIdx, setSpeakingIdx] = useState<number | null>(null);
+  const [autoPlay, setAutoPlay] = useState(false);
+  const lastAutoPlayedIdxRef = useRef<number>(-1);
+
+  const speakMessage = (idx: number, text: string) => {
+    if (!tts.supported || !text) return;
+    if (speakingIdx === idx && tts.speaking) {
+      tts.stop();
+      setSpeakingIdx(null);
+      return;
+    }
+    setSpeakingIdx(idx);
+    tts.speak(text, persona.id, voiceProfile);
+  };
+
+  // Auto-play the latest persona message when autoPlay is on. Tracks the
+  // index we last fired so toggling autoPlay mid-conversation doesn't
+  // re-speak old messages on render.
+  useEffect(() => {
+    if (!autoPlay || !tts.supported || tts.speaking) return;
+    let latest = -1;
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === "setup") {
+        latest = i;
+        break;
+      }
+    }
+    if (latest > lastAutoPlayedIdxRef.current && messages[latest]?.content) {
+      lastAutoPlayedIdxRef.current = latest;
+      speakMessage(latest, messages[latest].content);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages.length, autoPlay, tts.supported]);
+
+  // Clear speakingIdx when speech ends naturally.
+  useEffect(() => {
+    if (!tts.speaking && speakingIdx !== null) {
+      const t = setTimeout(() => setSpeakingIdx(null), 50);
+      return () => clearTimeout(t);
+    }
+  }, [tts.speaking, speakingIdx]);
+
   // After this persona is ready, surface up to 3 next-step personas. Excludes
   // self and any already-ready conversations. Falls back gracefully if none.
   const nextSuggestions = recommendedPersonas
@@ -393,13 +506,28 @@ export default function CastPersonaPanel({ persona, onComplete, onClose }: Props
         transition={{ duration: 0.4 }}
         className="fixed inset-0 z-[60] bg-cosmos-bg/95 backdrop-blur-md"
       >
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 z-50 p-2 text-cosmos-muted/50 hover:text-cosmos-text transition-colors rounded-lg"
-          title={`Close ${persona.name}`}
-        >
-          <X className="w-5 h-5" />
-        </button>
+        <div className="absolute top-4 right-4 z-50 flex items-center gap-1">
+          {tts.supported && (
+            <button
+              onClick={() => setAutoPlay((v) => !v)}
+              className={`p-2 rounded-lg transition-colors ${
+                autoPlay
+                  ? `${colors.sendBg} ${colors.sendText}`
+                  : "text-cosmos-muted/50 hover:text-cosmos-text"
+              }`}
+              title={autoPlay ? "Voice auto-play on. Click to disable." : "Auto-play voices off. Click to enable."}
+            >
+              {autoPlay ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+            </button>
+          )}
+          <button
+            onClick={onClose}
+            className="p-2 text-cosmos-muted/50 hover:text-cosmos-text transition-colors rounded-lg"
+            title={`Close ${persona.name}`}
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
 
         <PersonaStrip activeId={persona.id} />
 
@@ -494,6 +622,9 @@ export default function CastPersonaPanel({ persona, onComplete, onClose }: Props
                       onChipClick={(text) => sendTurn(text)}
                       disabled={loading}
                       colors={colors}
+                      ttsSupported={tts.supported}
+                      isSpeaking={speakingIdx === i && tts.speaking}
+                      onSpeak={() => speakMessage(i, m.content)}
                     />
                     {ready && i === latestPersonaIdx && (
                       <motion.div
@@ -638,7 +769,14 @@ export default function CastPersonaPanel({ persona, onComplete, onClose }: Props
                     </button>
                   </div>
                 </div>
-                <div className="mt-2 text-center">
+                <div className="mt-2 flex items-center justify-between gap-3">
+                  <span className="text-[10px] text-cosmos-muted/40">
+                    {isRecording ? (
+                      <span className={colors.sendText}>Listening...</span>
+                    ) : (
+                      <>Hold <kbd className="px-1 py-0.5 rounded border border-cosmos-border/50 text-cosmos-muted/55 font-mono text-[9px]">Space</kbd> to talk</>
+                    )}
+                  </span>
                   <button
                     onClick={onClose}
                     disabled={loading}

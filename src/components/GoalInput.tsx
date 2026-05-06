@@ -7,11 +7,8 @@ import {
   GraduationCap,
   Home,
   ShieldAlert,
-  Clock,
   ChevronDown,
   BookOpen,
-  TreePine,
-  Globe,
 } from "lucide-react";
 import { useStore } from "@/store/useStore";
 import ModePicker from "./ModePicker";
@@ -530,58 +527,9 @@ export default function GoalInput() {
             />
           </motion.div>
 
-          {/* Forest, Gallery & Session links */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.85, duration: 0.6 }}
-            className="mt-4 flex items-center justify-center gap-3 flex-wrap"
-          >
-            <a
-              href="/forest"
-              className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] text-cosmos-muted/50 border border-cosmos-border/30 rounded-lg hover:border-cosmos-glow/20 hover:text-cosmos-muted transition-all"
-            >
-              <TreePine className="w-3 h-3" />
-              My Forest
-            </a>
-            <a
-              href="/gallery"
-              className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] text-cosmos-muted/50 border border-cosmos-border/30 rounded-lg hover:border-cosmos-glow/20 hover:text-cosmos-muted transition-all"
-            >
-              <Globe className="w-3 h-3" />
-              Community Gallery
-            </a>
-            <label className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] text-cosmos-muted/50 border border-cosmos-border/30 rounded-lg hover:border-cosmos-glow/20 hover:text-cosmos-muted cursor-pointer transition-all" title="Upload a previously saved .json session file to continue where you left off">
-              <Clock className="w-3 h-3" />
-              <span>Upload saved session</span>
-              <input
-                type="file"
-                accept=".json"
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
-                  const reader = new FileReader();
-                  reader.onload = (ev) => {
-                    try {
-                      const data = JSON.parse(ev.target?.result as string);
-                      if (data.nodes && data.goalText) {
-                        const store = useStore.getState();
-                        store.setGoalText(data.goalText);
-                        store.addNodes(Object.values(data.nodes));
-                        if (data.values) store.setValues(data.values);
-                        if (data.critique) store.setCritique(data.critique);
-                        store.setHasStarted(true);
-                      }
-                    } catch {
-                      alert("Invalid session file.");
-                    }
-                  };
-                  reader.readAsText(file);
-                }}
-              />
-            </label>
-          </motion.div>
+          {/* Forest, Gallery, and Upload-session links removed for the
+              simplified-home iteration. Preserved on the wednesday-night
+              branch (and earlier in git history) for reference. */}
 
           {/* Footer disclaimer */}
           <motion.div
