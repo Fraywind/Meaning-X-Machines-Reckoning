@@ -157,6 +157,7 @@ export default function PersonaStrip({ activeId }: Props) {
     setCurrentCastPersona,
     pendingCrossCheck,
     clearPendingCrossCheck,
+    markCastVisited,
   } = useStore();
 
   const hasSetup = briefMessages.length > 0;
@@ -301,10 +302,15 @@ export default function PersonaStrip({ activeId }: Props) {
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
+                      // Keep the persona in the strip as a quiet entry
+                      // even though the user dismissed the chime-in.
+                      // markCastVisited makes them linger; the user can
+                      // tap them later if they change their mind.
+                      markCastVisited(p.id);
                       clearPendingCrossCheck();
                     }}
                     className="px-4 py-2.5 text-cosmos-muted/70 text-[11px] font-medium hover:text-cosmos-text transition-colors border-l border-cosmos-border/30"
-                    title="Dismiss this chime-in"
+                    title="Dismiss the call. Keeps the persona available in the strip."
                   >
                     Not now
                   </button>

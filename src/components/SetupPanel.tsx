@@ -145,31 +145,69 @@ function SetupCharacter({ thinking }: { thinking: boolean }) {
           opacity="0.92"
         />
 
-        {/* Eyes — bigger, with whites + pupils + highlight */}
-        <ellipse cx="93" cy="100" rx="5.5" ry="6.5" fill="#ffffff" stroke={ink} strokeWidth="1.5" />
-        <ellipse cx="127" cy="100" rx="5.5" ry="6.5" fill="#ffffff" stroke={ink} strokeWidth="1.5" />
-
+        {/* Regular eyes group — fade out during the big-smile beat so the
+            ^_^ smile-arc overlay below can take over. */}
         <motion.g
-          animate={{ scaleY: [1, 0.1, 1] }}
-          transition={{ duration: 0.18, times: [0, 0.5, 1], repeat: Infinity, repeatDelay: 4.2, ease: "easeInOut" }}
-          style={{ transformOrigin: "110px 100px" }}
+          animate={{ opacity: thinking ? 1 : [1, 1, 0, 1, 1, 1, 1, 1] }}
+          transition={{
+            duration: 24,
+            times: [0, 0.3, 0.34, 0.42, 0.5, 0.7, 0.85, 1],
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
         >
-          {/* Pupil saccade — eyes dart subtly every few seconds */}
+          <ellipse cx="93" cy="100" rx="5.5" ry="6.5" fill="#ffffff" stroke={ink} strokeWidth="1.5" />
+          <ellipse cx="127" cy="100" rx="5.5" ry="6.5" fill="#ffffff" stroke={ink} strokeWidth="1.5" />
+
           <motion.g
-            animate={{ x: [0, 1.5, 0, -1.2, 0, 0] }}
-            transition={{
-              duration: 6,
-              times: [0, 0.08, 0.18, 0.3, 0.42, 1],
-              repeat: Infinity,
-              ease: "easeInOut",
-            }}
+            animate={{ scaleY: [1, 0.1, 1] }}
+            transition={{ duration: 0.18, times: [0, 0.5, 1], repeat: Infinity, repeatDelay: 4.2, ease: "easeInOut" }}
+            style={{ transformOrigin: "110px 100px" }}
           >
-            <ellipse cx="93" cy="101" rx="2.6" ry="3.4" fill={ink} />
-            <ellipse cx="127" cy="101" rx="2.6" ry="3.4" fill={ink} />
-            {/* Highlights */}
-            <circle cx="94.5" cy="99" r="1.1" fill="#ffffff" opacity="0.95" />
-            <circle cx="128.5" cy="99" r="1.1" fill="#ffffff" opacity="0.95" />
+            {/* Pupil saccade — eyes dart subtly every few seconds */}
+            <motion.g
+              animate={{ x: [0, 1.5, 0, -1.2, 0, 0] }}
+              transition={{
+                duration: 6,
+                times: [0, 0.08, 0.18, 0.3, 0.42, 1],
+                repeat: Infinity,
+                ease: "easeInOut",
+              }}
+            >
+              <ellipse cx="93" cy="101" rx="2.6" ry="3.4" fill={ink} />
+              <ellipse cx="127" cy="101" rx="2.6" ry="3.4" fill={ink} />
+              {/* Highlights */}
+              <circle cx="94.5" cy="99" r="1.1" fill="#ffffff" opacity="0.95" />
+              <circle cx="128.5" cy="99" r="1.1" fill="#ffffff" opacity="0.95" />
+            </motion.g>
           </motion.g>
+        </motion.g>
+
+        {/* ^_^ smile-arc eye overlay. Fades in briefly during the
+            big-smile beat to give Setup a periodic happy expression. */}
+        <motion.g
+          animate={{ opacity: thinking ? 0 : [0, 0, 1, 0, 0, 0, 0, 0] }}
+          transition={{
+            duration: 24,
+            times: [0, 0.3, 0.36, 0.42, 0.5, 0.7, 0.85, 1],
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+        >
+          <path
+            d="M 86 102 Q 93 95 100 102"
+            stroke={ink}
+            strokeWidth="2.4"
+            fill="none"
+            strokeLinecap="round"
+          />
+          <path
+            d="M 120 102 Q 127 95 134 102"
+            stroke={ink}
+            strokeWidth="2.4"
+            fill="none"
+            strokeLinecap="round"
+          />
         </motion.g>
 
         {/* Eyebrows */}
@@ -195,7 +233,10 @@ function SetupCharacter({ thinking }: { thinking: boolean }) {
         {/* Nose — simple subtle */}
         <path d="M 110 110 Q 109 118 113 120" stroke={skinShade} strokeWidth="1.5" fill="none" strokeLinecap="round" opacity="0.6" />
 
-        {/* Mouth — small smile in idle; talks (open/close cycle) when thinking */}
+        {/* Mouth — talks when thinking; cycles through emotions in idle.
+            The expression beats sync with the eye overlay above so the
+            big smile lands with ^_^ eyes, and the surprised :o lands on
+            its own beat to add a periodic dose of personality. */}
         <motion.path
           stroke={ink}
           strokeWidth="2"
@@ -209,11 +250,21 @@ function SetupCharacter({ thinking }: { thinking: boolean }) {
                   "M 103 131 Q 110 134 117 131",
                   "M 100 132 Q 110 138 120 132",
                 ]
-              : "M 102 128 Q 110 134 118 128",
+              : [
+                  "M 102 128 Q 110 134 118 128", // small smile (default)
+                  "M 102 128 Q 110 134 118 128", // hold
+                  "M 96 128 Q 110 144 124 128",  // BIG smile
+                  "M 102 128 Q 110 134 118 128", // back to small smile
+                  "M 102 128 Q 110 134 118 128", // hold
+                  "M 105 130 a 5 5 0 1 0 10 0 a 5 5 0 1 0 -10 0", // :o surprised
+                  "M 102 128 Q 110 134 118 128", // back to small smile
+                  "M 102 128 Q 110 134 118 128", // hold
+                ],
           }}
           transition={{
-            duration: thinking ? 0.65 : 0.5,
-            repeat: thinking ? Infinity : 0,
+            duration: thinking ? 0.65 : 24,
+            times: thinking ? undefined : [0, 0.3, 0.38, 0.45, 0.7, 0.74, 0.8, 1],
+            repeat: Infinity,
             ease: "easeInOut",
           }}
         />
@@ -422,19 +473,24 @@ function ReadyActions({
             </span>
           </div>
           <p className="text-[11px] text-cosmos-muted/60 leading-relaxed">
-            Talk to one before opening the tree. Each will push your thinking from a different angle.
+            Talk to one before opening the tree. Each will push your thinking from a different angle. You can come back to Setup anytime (tap it in the strip up top) if a new question opens up or you want to add another expert.
           </p>
           <div className="space-y-1.5">
             {recommendedPersonas.map((p, idx) => {
               const c = archetypeColor(p.archetype);
               const isFirst = idx === 0;
+              const isSecond = idx === 1;
               const alreadyTalked = !!castConversations[p.id]?.ready;
+              // Strongest emphasis on the first un-talked-to persona;
+              // a softer secondary emphasis on the second so the user
+              // sees a clear "go here next" after the first.
               const shouldPulse = isFirst && !alreadyTalked;
+              const shouldHintSecondary = isSecond && !alreadyTalked && !castConversations[recommendedPersonas[0]?.id]?.ready;
               return (
                 <button
                   key={p.id}
                   onClick={() => onSummonPersona(p.id)}
-                  className={`w-full text-left flex items-start gap-2 p-2 rounded-lg border transition-all ${c.bg} ${c.border} ${c.hover} ${shouldPulse ? "animate-pulse-glow" : ""}`}
+                  className={`w-full text-left flex items-start gap-2 p-2 rounded-lg border transition-all ${c.bg} ${c.border} ${c.hover} ${shouldPulse ? "animate-pulse-glow" : ""} ${shouldHintSecondary ? "ring-1 ring-cosmos-glow/15" : ""}`}
                 >
                   <div className={`text-xs font-medium ${c.text}`}>
                     {p.name}
