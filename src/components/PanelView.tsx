@@ -2,12 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Send, Loader2, Volume2, VolumeX, Mic, MicOff } from "lucide-react";
+import { ArrowLeft, Send, Loader2, Volume2, VolumeX, Mic, MicOff, Music } from "lucide-react";
 import { useStore } from "@/store/useStore";
 import { safeFetch } from "@/lib/api";
 import { getLanguageConfig } from "@/lib/i18n";
 import { getPersonaColors } from "@/lib/personaColors";
 import { useTextToSpeech, getVoiceProfile } from "@/lib/useTextToSpeech";
+import { useAnimalese, getAnimaleseProfile } from "@/lib/useAnimalese";
 import { CastPersonaConfig } from "./CastPersonaPanel";
 
 const TURN_BUDGET = 4;
@@ -45,19 +46,42 @@ export default function PanelView({ configs, onClose }: Props) {
   const [isRecording, setIsRecording] = useState(false);
   const [autoPlay, setAutoPlay] = useState(false);
   const [speakingIdx, setSpeakingIdx] = useState<number | null>(null);
+  const [voiceMode, setVoiceMode] = useState<"tts" | "animalese">("animalese");
   const tts = useTextToSpeech();
+  const animalese = useAnimalese();
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const lastAutoPlayedIdxRef = useRef(-1);
 
+  const isAnyTalking = voiceMode === "tts" ? tts.speaking : animalese.speaking;
+  const supportsActiveMode = voiceMode === "tts" ? tts.supported : animalese.supported;
+
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [panelMessages.length, panelLoadingPersona]);
 
+  const speakMessage = (idx: number, text: string, personaId: string) => {
+    const cfg = personaId === pA.id ? pA : pB;
+    if (speakingIdx === idx && isAnyTalking) {
+      tts.stop();
+      animalese.stop();
+      setSpeakingIdx(null);
+      return;
+    }
+    tts.stop();
+    animalese.stop();
+    setSpeakingIdx(idx);
+    if (voiceMode === "animalese") {
+      animalese.speak(text, cfg.id, getAnimaleseProfile(cfg.archetype));
+    } else {
+      tts.speak(text, cfg.id, getVoiceProfile(cfg.archetype));
+    }
+  };
+
   // Auto-play the latest persona message if autoPlay is on.
   useEffect(() => {
-    if (!autoPlay || !tts.supported || tts.speaking) return;
+    if (!autoPlay || !supportsActiveMode || isAnyTalking) return;
     let latest = -1;
     for (let i = panelMessages.length - 1; i >= 0; i--) {
       if (panelMessages[i].role === "persona") { latest = i; break; }
@@ -65,32 +89,17 @@ export default function PanelView({ configs, onClose }: Props) {
     if (latest > lastAutoPlayedIdxRef.current && panelMessages[latest]?.content) {
       lastAutoPlayedIdxRef.current = latest;
       const m = panelMessages[latest];
-      const cfg = m.personaId === pA.id ? pA : pB;
-      const profile = getVoiceProfile(cfg.archetype);
-      setSpeakingIdx(latest);
-      tts.speak(m.content, cfg.id, profile);
+      speakMessage(latest, m.content, m.personaId || pA.id);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [panelMessages.length, autoPlay, tts.supported]);
+  }, [panelMessages.length, autoPlay, voiceMode, supportsActiveMode]);
 
   useEffect(() => {
-    if (!tts.speaking && speakingIdx !== null) {
+    if (!isAnyTalking && speakingIdx !== null) {
       const t = setTimeout(() => setSpeakingIdx(null), 50);
       return () => clearTimeout(t);
     }
-  }, [tts.speaking, speakingIdx]);
-
-  const speakMessage = (idx: number, text: string, personaId: string) => {
-    const cfg = personaId === pA.id ? pA : pB;
-    const profile = getVoiceProfile(cfg.archetype);
-    if (speakingIdx === idx && tts.speaking) {
-      tts.stop();
-      setSpeakingIdx(null);
-      return;
-    }
-    setSpeakingIdx(idx);
-    tts.speak(text, cfg.id, profile);
-  };
+  }, [isAnyTalking, speakingIdx]);
 
   // Voice input. Snapshot input at start so interim transcripts don't
   // pile on top of each other and stutter.
@@ -299,7 +308,22 @@ export default function PanelView({ configs, onClose }: Props) {
         className="fixed inset-0 z-[60] bg-cosmos-bg/95 backdrop-blur-md"
       >
         <div className="absolute top-4 right-4 z-50 flex items-center gap-1">
-          {tts.supported && (
+          <button
+            onClick={() => setVoiceMode((m) => (m === "tts" ? "animalese" : "tts"))}
+            className={`p-2 rounded-lg transition-colors ${
+              voiceMode === "animalese"
+                ? "bg-cosmos-glow/15 text-cosmos-glow"
+                : "text-cosmos-muted/50 hover:text-cosmos-text"
+            }`}
+            title={
+              voiceMode === "animalese"
+                ? "Animal Crossing-style voice. Click for natural TTS."
+                : "Natural TTS. Click for Animal Crossing-style voice."
+            }
+          >
+            <Music className="w-4 h-4" />
+          </button>
+          {supportsActiveMode && (
             <button
               onClick={() => setAutoPlay((v) => !v)}
               className={`p-2 rounded-lg transition-colors ${
@@ -390,7 +414,7 @@ export default function PanelView({ configs, onClose }: Props) {
                 const cfg = m.personaId === pA.id ? pA : pB;
                 const colors = m.personaId === pA.id ? colorsA : colorsB;
                 const isA = m.personaId === pA.id;
-                const isSpeaking = speakingIdx === i && tts.speaking;
+                const isSpeaking = speakingIdx === i && isAnyTalking;
                 return (
                   <motion.div
                     key={i}
@@ -398,7 +422,7 @@ export default function PanelView({ configs, onClose }: Props) {
                     animate={{ opacity: 1, y: 0 }}
                     className={`flex ${isA ? "justify-start" : "justify-end"} items-end gap-1.5`}
                   >
-                    {!isA && tts.supported && (
+                    {!isA && supportsActiveMode && (
                       <button
                         onClick={() => speakMessage(i, m.content, cfg.id)}
                         className={`flex-shrink-0 p-1.5 rounded-full transition-all ${
@@ -421,7 +445,7 @@ export default function PanelView({ configs, onClose }: Props) {
                       </div>
                       {m.content}
                     </div>
-                    {isA && tts.supported && (
+                    {isA && supportsActiveMode && (
                       <button
                         onClick={() => speakMessage(i, m.content, cfg.id)}
                         className={`flex-shrink-0 p-1.5 rounded-full transition-all ${

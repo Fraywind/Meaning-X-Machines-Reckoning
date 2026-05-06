@@ -200,11 +200,17 @@ export default function PersonaStrip({ activeId }: Props) {
     else setCurrentCastPersona(id);
   };
 
+  // When the cast is large, tabs collapse to avatar-only so the strip
+  // doesn't overrun the conversation panel on the right. Names show on
+  // hover (the title attribute) and are visible above the active persona
+  // via the persona-room header.
+  const compact = displayList.length >= 4;
+
   return (
     <motion.div
       initial={{ opacity: 0, x: -8 }}
       animate={{ opacity: 1, x: 0 }}
-      className="absolute top-3 left-3 z-50 flex items-center gap-2 px-2.5 py-2 bg-cosmos-surface/80 backdrop-blur-md border border-cosmos-border/40 rounded-2xl shadow-lg"
+      className={`absolute top-3 left-3 z-50 flex items-center gap-${compact ? "1.5" : "2"} px-2.5 py-2 bg-cosmos-surface/80 backdrop-blur-md border border-cosmos-border/40 rounded-2xl shadow-lg max-w-[calc(50vw-1rem)]`}
     >
       <span className="text-[9px] text-cosmos-muted/50 uppercase tracking-wider px-1.5 hidden md:inline">
         Personas
@@ -228,7 +234,7 @@ export default function PersonaStrip({ activeId }: Props) {
           <div key={p.id} className="relative">
             <button
               onClick={() => handleClick(p.id)}
-              className={`flex items-center gap-2 pl-1.5 pr-3 py-1.5 rounded-xl border transition-all ${
+              className={`flex items-center ${compact ? "p-0.5" : "gap-2 pl-1.5 pr-3 py-1.5"} rounded-xl border transition-all ${
                 isActive
                   ? `${c.activeBg} ${c.activeBorder} ${c.activeText} scale-105`
                   : `bg-cosmos-bg/30 ${c.idleBorder} ${c.idleText} hover:scale-105 hover:brightness-125`
@@ -236,13 +242,13 @@ export default function PersonaStrip({ activeId }: Props) {
               title={isCrossCheckTarget ? pendingCrossCheck!.oneLineTake : p.name}
             >
               <span
-                className={`block w-11 h-11 rounded-full overflow-hidden border-2 ${
+                className={`block ${compact ? "w-9 h-9" : "w-11 h-11"} rounded-full overflow-hidden border-2 ${
                   isActive || isCrossCheckTarget ? c.activeBorder : "border-cosmos-border/30"
                 } bg-cosmos-bg/60 shadow-sm`}
               >
                 <MiniAvatar archetype={p.archetype} seed={p.name} />
               </span>
-              <span className="text-[12px] font-medium leading-tight">{p.name}</span>
+              {!compact && <span className="text-[12px] font-medium leading-tight">{p.name}</span>}
             </button>
             {isCrossCheckTarget && (
               <motion.div

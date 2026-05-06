@@ -2,11 +2,12 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, Send, Loader2, X, Mic, MicOff, Volume2, VolumeX } from "lucide-react";
+import { ArrowRight, Send, Loader2, X, Mic, MicOff, Volume2, VolumeX, Music } from "lucide-react";
 import { useStore, BriefMessage } from "@/store/useStore";
 import { safeFetch } from "@/lib/api";
 import { getLanguageConfig } from "@/lib/i18n";
 import { useTextToSpeech, getVoiceProfile } from "@/lib/useTextToSpeech";
+import { useAnimalese, getAnimaleseProfile } from "@/lib/useAnimalese";
 import PersonaStrip from "./PersonaStrip";
 
 interface Props {
@@ -565,23 +566,36 @@ export default function SetupPanel({ onReady, onSummonPersona, examples }: Props
     castConversations,
   } = useStore();
   const tts = useTextToSpeech();
+  const animalese = useAnimalese();
   const setupVoiceProfile = getVoiceProfile("setup");
+  const setupAnimaleseProfile = getAnimaleseProfile("setup");
+  const [voiceMode, setVoiceMode] = useState<"tts" | "animalese">("animalese");
   const lastAutoPlayedIdxRef = useRef(-1);
 
+  const isAnyTalking = voiceMode === "tts" ? tts.speaking : animalese.speaking;
+  const supportsActiveMode = voiceMode === "tts" ? tts.supported : animalese.supported;
+
   const speakSetupMessage = (idx: number, text: string) => {
-    if (!tts.supported || !text) return;
-    if (speakingIdx === idx && tts.speaking) {
+    if (!supportsActiveMode || !text) return;
+    if (speakingIdx === idx && isAnyTalking) {
       tts.stop();
+      animalese.stop();
       setSpeakingIdx(null);
       return;
     }
+    tts.stop();
+    animalese.stop();
     setSpeakingIdx(idx);
-    tts.speak(text, "setup", setupVoiceProfile);
+    if (voiceMode === "animalese") {
+      animalese.speak(text, "setup", setupAnimaleseProfile);
+    } else {
+      tts.speak(text, "setup", setupVoiceProfile);
+    }
   };
 
   // Auto-play the latest Setup message when autoPlay is enabled.
   useEffect(() => {
-    if (!autoPlay || !tts.supported || tts.speaking) return;
+    if (!autoPlay || !supportsActiveMode || isAnyTalking) return;
     let latest = -1;
     for (let i = briefMessages.length - 1; i >= 0; i--) {
       if (briefMessages[i].role === "setup") { latest = i; break; }
@@ -591,14 +605,14 @@ export default function SetupPanel({ onReady, onSummonPersona, examples }: Props
       speakSetupMessage(latest, briefMessages[latest].content);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [briefMessages.length, autoPlay, tts.supported]);
+  }, [briefMessages.length, autoPlay, voiceMode, supportsActiveMode]);
 
   useEffect(() => {
-    if (!tts.speaking && speakingIdx !== null) {
+    if (!isAnyTalking && speakingIdx !== null) {
       const t = setTimeout(() => setSpeakingIdx(null), 50);
       return () => clearTimeout(t);
     }
-  }, [tts.speaking, speakingIdx]);
+  }, [isAnyTalking, speakingIdx]);
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
@@ -995,7 +1009,23 @@ export default function SetupPanel({ onReady, onSummonPersona, examples }: Props
             whether Setup auto-reads its messages aloud. Per-message volume
             buttons on each Setup bubble give manual control regardless. */}
         <div className="absolute top-4 right-4 z-50 flex items-center gap-1">
-          {tts.supported && (
+          {/* Voice-mode toggle: cycles TTS <-> Animalese. */}
+          <button
+            onClick={() => setVoiceMode((m) => (m === "tts" ? "animalese" : "tts"))}
+            className={`p-2 rounded-lg transition-colors ${
+              voiceMode === "animalese"
+                ? "bg-cosmos-glow/15 text-cosmos-glow"
+                : "text-cosmos-muted/50 hover:text-cosmos-text"
+            }`}
+            title={
+              voiceMode === "animalese"
+                ? "Animal Crossing-style voice. Click for natural TTS."
+                : "Natural TTS. Click for Animal Crossing-style voice."
+            }
+          >
+            <Music className="w-4 h-4" />
+          </button>
+          {supportsActiveMode && (
             <button
               onClick={() => setAutoPlay((v) => !v)}
               className={`p-2 rounded-lg transition-colors ${
@@ -1043,8 +1073,8 @@ export default function SetupPanel({ onReady, onSummonPersona, examples }: Props
                       isLatest={i === latestSetupIdx}
                       onChipClick={(text) => send(text)}
                       disabled={briefLoading}
-                      ttsSupported={tts.supported}
-                      isSpeaking={speakingIdx === i && tts.speaking}
+                      ttsSupported={supportsActiveMode}
+                      isSpeaking={speakingIdx === i && isAnyTalking}
                       onSpeak={() => speakSetupMessage(i, m.content)}
                     />
                     {briefReady && i === latestSetupIdx && (

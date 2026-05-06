@@ -2,12 +2,13 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, Send, Loader2, X, Mic, MicOff, Volume2, VolumeX, Users } from "lucide-react";
+import { ArrowRight, Send, Loader2, X, Mic, MicOff, Volume2, VolumeX, Users, Music } from "lucide-react";
 import { useStore, BriefMessage, PersonaConcern } from "@/store/useStore";
 import { safeFetch } from "@/lib/api";
 import { getLanguageConfig } from "@/lib/i18n";
 import { getPersonaColors, PersonaColorSet } from "@/lib/personaColors";
 import { useTextToSpeech, getVoiceProfile } from "@/lib/useTextToSpeech";
+import { useAnimalese, getAnimaleseProfile } from "@/lib/useAnimalese";
 import PersonaStrip from "./PersonaStrip";
 
 export interface CastPersonaConfig {
@@ -606,31 +607,48 @@ export default function CastPersonaPanel({ persona, onComplete, onClose }: Props
   const Character = persona.CharacterComponent;
   const colors = getPersonaColors(persona.archetype);
 
-  // TTS: shared instance per panel (only one bubble can speak at a time).
-  // The voice profile is keyed off archetype, the voice itself off persona.id
-  // so different domain experts in the same gender bucket get distinct voices.
+  // Voice playback. Two engines:
+  //   - tts: real human voices (browser SpeechSynthesis), default.
+  //   - animalese: Animal Crossing-style synthesized warble, opt-in.
+  // The user toggles voiceMode in the header. Per-message volume buttons
+  // and the auto-play toggle both use whichever engine is active.
   const tts = useTextToSpeech();
+  const animalese = useAnimalese();
   const voiceProfile = getVoiceProfile(persona.archetype);
+  const animaleseProfile = getAnimaleseProfile(persona.archetype);
   const [speakingIdx, setSpeakingIdx] = useState<number | null>(null);
   const [autoPlay, setAutoPlay] = useState(false);
+  const [voiceMode, setVoiceMode] = useState<"tts" | "animalese">("animalese");
   const lastAutoPlayedIdxRef = useRef<number>(-1);
 
+  const isAnyTalking = voiceMode === "tts" ? tts.speaking : animalese.speaking;
+  const supportsActiveMode = voiceMode === "tts" ? tts.supported : animalese.supported;
+
   const speakMessage = (idx: number, text: string) => {
-    if (!tts.supported || !text) return;
-    if (speakingIdx === idx && tts.speaking) {
+    if (!supportsActiveMode || !text) return;
+    if (speakingIdx === idx && isAnyTalking) {
+      // Stop whichever engine is running.
       tts.stop();
+      animalese.stop();
       setSpeakingIdx(null);
       return;
     }
+    // Stop any other engine before starting the active one.
+    tts.stop();
+    animalese.stop();
     setSpeakingIdx(idx);
-    tts.speak(text, persona.id, voiceProfile);
+    if (voiceMode === "animalese") {
+      animalese.speak(text, persona.id, animaleseProfile);
+    } else {
+      tts.speak(text, persona.id, voiceProfile);
+    }
   };
 
   // Auto-play the latest persona message when autoPlay is on. Tracks the
   // index we last fired so toggling autoPlay mid-conversation doesn't
   // re-speak old messages on render.
   useEffect(() => {
-    if (!autoPlay || !tts.supported || tts.speaking) return;
+    if (!autoPlay || !supportsActiveMode || isAnyTalking) return;
     let latest = -1;
     for (let i = messages.length - 1; i >= 0; i--) {
       if (messages[i].role === "setup") {
@@ -643,15 +661,15 @@ export default function CastPersonaPanel({ persona, onComplete, onClose }: Props
       speakMessage(latest, messages[latest].content);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [messages.length, autoPlay, tts.supported]);
+  }, [messages.length, autoPlay, voiceMode, supportsActiveMode]);
 
-  // Clear speakingIdx when speech ends naturally.
+  // Clear speakingIdx when speech ends naturally (whichever engine).
   useEffect(() => {
-    if (!tts.speaking && speakingIdx !== null) {
+    if (!isAnyTalking && speakingIdx !== null) {
       const t = setTimeout(() => setSpeakingIdx(null), 50);
       return () => clearTimeout(t);
     }
-  }, [tts.speaking, speakingIdx]);
+  }, [isAnyTalking, speakingIdx]);
 
   // After this persona is ready, surface up to 3 next-step personas. Excludes
   // self and any already-ready conversations. Falls back gracefully if none.
@@ -705,7 +723,23 @@ export default function CastPersonaPanel({ persona, onComplete, onClose }: Props
               <Users className="w-4 h-4" />
             </button>
           )}
-          {tts.supported && (
+          {/* Voice-mode toggle: cycles TTS -> Animalese. Click switches mode. */}
+          <button
+            onClick={() => setVoiceMode((m) => (m === "tts" ? "animalese" : "tts"))}
+            className={`p-2 rounded-lg transition-colors ${
+              voiceMode === "animalese"
+                ? `${colors.sendBg} ${colors.sendText}`
+                : "text-cosmos-muted/50 hover:text-cosmos-text"
+            }`}
+            title={
+              voiceMode === "animalese"
+                ? "Animal Crossing-style synthesized voice. Click for natural TTS."
+                : "Natural TTS voice. Click for Animal Crossing-style synth."
+            }
+          >
+            <Music className="w-4 h-4" />
+          </button>
+          {supportsActiveMode && (
             <button
               onClick={() => setAutoPlay((v) => !v)}
               className={`p-2 rounded-lg transition-colors ${
