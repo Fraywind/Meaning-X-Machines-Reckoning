@@ -169,9 +169,6 @@ export default function GoalInput() {
       text: "I want to build a learning tool for 3-5 year olds, but I'm worried I'll just add another mediocre app to a crowded market. How should I think about whether to actually pursue this, given my background isn't in early childhood education?",
     },
     {
-      text: "I've been offered a senior role at a nonprofit doing work I deeply care about. The pay is half what I make now. We have two kids and a mortgage. I have until next Friday. I want to plan out whether I should take it.",
-    },
-    {
       text: "I want to plan how to host Thanksgiving this year. I've never hosted before and I suck at cooking. My friend's parents are coming and they're Indian vegetarian. Honestly the whole thing is stressing me out. I want to figure out whether to actually pull this off or bail, because I have no idea how to make a vegetarian Thanksgiving everyone will actually enjoy.",
     },
   ];
