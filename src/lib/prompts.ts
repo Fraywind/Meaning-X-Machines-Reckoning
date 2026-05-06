@@ -38,6 +38,68 @@ Hard rules for crossCheck (the bar is HIGH; default is to omit):
 }
 
 /**
+ * Panel-mode context: when the user runs a multi-persona panel, each
+ * persona's prompt includes the OTHER persona's most recent contribution
+ * and an instruction about whether to engage. The default is to answer
+ * the user, not address the other persona, unless there is real
+ * substance to engage with. Direct address every turn collapses into
+ * theater and trains the user to ignore the personas.
+ */
+function buildPanelContextBlock(
+  panelContext: { otherName: string; otherLastMessage: string } | null,
+): string {
+  if (!panelContext || !panelContext.otherName) return "";
+  return `
+PANEL CONTEXT (you are in a moderated panel with another persona):
+- Other persona in the room: ${panelContext.otherName}
+${panelContext.otherLastMessage ? `- Their most recent contribution: "${panelContext.otherLastMessage}"` : "- They have not spoken yet in this panel."}
+
+Your job is to answer the user. You MAY directly engage with what ${panelContext.otherName} just said, but ONLY when there is real substance to engage with: a concrete contrast, a correction they got wrong, a complementary insight that builds on their point. If their contribution is fine and you have nothing to add, DO NOT mention them, just answer the user.
+
+Hard rules for direct address:
+- Direct address is the exception, not the default. Most turns should not reference the other persona at all.
+- If you do engage, name them explicitly ("I'd push back on what ${panelContext.otherName} just said about...") and be specific.
+- Never address them just to acknowledge their existence ("As ${panelContext.otherName} mentioned..."). That is filler.
+- Never compete for the floor. You speak when the user calls on you.
+- Stay in your own role. You are not summarizing the other persona, you are bringing your own perspective.
+`.trim();
+}
+
+/**
+ * Shared spec for the "judgmentMoment" field. Brian Cantwell Smith's
+ * distinction between reckoning and judgment is the load-bearing idea:
+ * the AI does reckoning (decomposition, inference, surfacing tradeoffs);
+ * the human does judgment (the value-laden choice). When a persona's
+ * turn truly surfaces a value-laden fork, the persona flags it so the UI
+ * highlights it AND a judgment node gets added to the tree live, as the
+ * conversation goes. Default is to omit; the bar is high.
+ */
+const JUDGMENT_MOMENT_SPEC = `
+"judgmentMoment" — OPTIONAL. Set this ONLY when your turn surfaces a genuine value-laden fork the user MUST make a personal choice on. This is the distinction between reckoning (what the AI can do: decomposition, inference, naming tradeoffs) and judgment (what only the user can do: choose between options that compete based on values they hold). Most turns are reckoning. Judgment is rare and load-bearing.
+
+When (and only when) you flag a judgmentMoment, populate:
+{
+  "question": "<the value-laden question, max 12 words. Phrase as a real choice the user must make.>",
+  "stakes": "<1 sentence on what is at stake.>",
+  "conflict": "<1 sentence naming what makes this a genuine tradeoff, not a factual question.>",
+  "options": [
+    { "label": "<short option label, max 6 words>", "description": "<1 sentence>", "tradeoffs": ["<short tradeoff phrase>"], "consequences": ["<short consequence>"] },
+    { "label": "<...>", "description": "<...>", "tradeoffs": ["<...>"], "consequences": ["<...>"] }
+  ]
+}
+- 2 to 3 options. Each must genuinely compete on values, not on facts.
+- The user reading it should think "yes, this is a real tradeoff I have to choose."
+- Use the user's vocabulary, not jargon.
+
+Hard rules for judgmentMoment (failing any rule means OMIT):
+- The fork must hinge on what the USER VALUES, not on what is true. Factual or clarifying questions are NOT judgment moments.
+- An option with a clearly better answer is NOT a judgment moment. If reckoning can resolve it, it is reckoning.
+- Never flag more than ONE judgmentMoment per turn.
+- Default to omitting. A weak judgmentMoment (the user reads it and shrugs) is worse than none, because it dilutes the signal.
+- Do NOT include the field in your JSON if you are skipping it.
+`.trim();
+
+/**
  * Shared instruction for the structured "concerns" field that personas
  * return alongside their flat summary when ready=true. Renders as a
  * series of cards in the conversation, each with an actionable followup.
@@ -205,6 +267,9 @@ UNIVERSAL personas (use these ids and archetypes verbatim):
 - { "id": "skeptic", "name": "Skeptic", "role": "challenger. Pushes back on assumptions to sharpen the thinking, not to argue.", "archetype": "skeptic" }
 - { "id": "pragmatist", "name": "Pragmatist", "role": "operator. Asks what you actually do tomorrow.", "archetype": "pragmatist" }
 - { "id": "stress-test", "name": "Stress Test", "role": "premortem. Imagines this has failed and asks why.", "archetype": "stress-test" }
+- { "id": "anchor", "name": "Anchor", "role": "synthesizer. Pulls threads from the other personas, asks what's realistic given your constraints, and helps you commit to a plan.", "archetype": "anchor" }
+
+CAST ORDERING RULE: Skeptic must always be FIRST in the list when present (the UI vibrates the first entry). Anchor, when present, must always be LAST in the list. Anchor's job is to wrap the conversation, so the user should naturally arrive there after talking to other personas. Domain experts go in the middle. Recommend Anchor in almost every cast (the synthesis move is high-value), unless the goal is so simple it doesn't need wrap-up.
 
 DOMAIN-SPECIFIC personas: invent based on the goal. Each domain persona must include a full dossier so it reads as a real practitioner, not a generic role label. The dossier focuses Claude's attention on the specific concepts, vocabulary, and push angles a real expert would think in. Schema:
 
@@ -215,7 +280,8 @@ DOMAIN-SPECIFIC personas: invent based on the goal. Each domain persona must inc
   "archetype": "expert",
   "expertise": "<2-3 sentences naming the SPECIFIC body of knowledge this persona has: concepts they think in, the load-bearing distinctions in this field, what they actually pay attention to. Use real domain terms with names. Avoid generic platitudes like 'they bring lived experience' (no kidding). Example for an early childhood educator: 'Thinks in phonemic awareness vs. letter recognition (different skills, often conflated). Watches attention span by age (~5 min for 3yo, ~10-12 min for 5yo). Knows the second-week retention cliff that kills most ed-tech: kids learn the gimmick, then it stops working.'>",
   "pushFor": "<2-3 sentences on what THIS persona would push THIS user on, given the user's specific stated goal. Concrete and specific. Example: 'Whether the user has distinguished letter recognition from phonemic awareness. Whether their concept of engagement is actually retention or just first-touch novelty. Whether the parent-as-buyer / kid-as-user gap is in their model.'>",
-  "vocabulary": ["<array of 5-8 specific terms/concepts this persona would naturally use in conversation. Example for ECE: 'phonemic awareness', 'scaffolded', 'fine motor', 'joint attention', 'second-week retention', 'parent-as-buyer', 'rote drilling vs contextual'>"]
+  "vocabulary": ["<array of 5-8 specific terms/concepts this persona would naturally use in conversation. Example for ECE: 'phonemic awareness', 'scaffolded', 'fine motor', 'joint attention', 'second-week retention', 'parent-as-buyer', 'rote drilling vs contextual'>"],
+  "accessory": "<one of: 'chef-hat', 'glasses', 'stethoscope', 'clipboard', 'book', 'briefcase', 'mortarboard', 'headphones', 'lab-coat', 'hard-hat', 'paintbrush', 'none'. Pick the one that best telegraphs this persona's role visually. Cooks/chefs/food professionals: chef-hat. Doctors/nurses/clinicians: stethoscope. Researchers/academics/professors: book or mortarboard. Designers/artists: paintbrush. Engineers/architects/construction: hard-hat. Lawyers/business/operators/consultants: briefcase. Audio/music/podcast: headphones. Scientists/lab workers: lab-coat. Teachers/professors who don't fit a more specific role: glasses or mortarboard. Project managers/PMs/operators: clipboard. Use 'none' only if no accessory fits the role naturally.>"
 }
 
 DOMAIN EXAMPLES (do not invent personas as listed verbatim; tune to the user's actual goal):
@@ -225,13 +291,13 @@ DOMAIN EXAMPLES (do not invent personas as listed verbatim; tune to the user's a
 - For a legal/contract decision: a contracts lawyer, an in-house counsel
 - For relocation: a real-estate analyst, a future-self in 5 years
 
-Pick 1-3 domain personas that would actually push the user's thinking on THIS specific decision. Don't pick generic ones. Be concrete: "Zookeeper with 20 years operating a public zoo" beats "Animal expert".
+Pick 2-4 DISTINCT domain personas that would actually push the user's thinking on THIS specific decision. Don't pick generic ones. Be concrete: "Zookeeper with 20 years operating a public zoo" beats "Animal expert". Each domain persona should bring a DIFFERENT angle on the goal, not overlap with another. For a Thanksgiving question, "Chef" (technique), "Experienced Host" (gathering dynamics), "Parent who hosted firsts" (real-world rookie hosting), and "Dietary-needs Caterer" (logistics for restricted diets) are all distinct. "Food Planner" alone is conflating Chef + Caterer + Host into one persona, which makes the cast feel thin. Prefer multiple sharp-angled personas over one catch-all.
 
 The dossier is load-bearing: a domain persona without a real expertise/pushFor/vocabulary block will read as a generic AI in costume, which is the failure mode the user explicitly wants avoided. Take the dossier seriously. If you genuinely don't know enough about the domain to write a real dossier, prefer fewer better-grounded personas over more thinly-grounded ones.
 
 CAPITALIZATION: every "role" string starts with a capital letter. "Parent of young kids who...", not "parent of young kids who...". Always Sentence-case.
 
-Total recommended count: 2-4 across both categories. Skeptic must always be FIRST in the list when present (it's the strongest universal recommendation; the UI vibrates the first entry). Universal personas (Skeptic / Pragmatist / Stress Test) do NOT need expertise/pushFor/vocabulary fields; only the domain "expert" archetype does.
+Total recommended count: 4-6 personas (Skeptic + 2-4 domain experts + Anchor). The cast should feel rich and varied, not minimal. If a goal is genuinely simple, 3 is acceptable, but the default for a substantive deliberation is 5. Universal personas (Skeptic / Pragmatist / Stress Test / Anchor) do NOT need expertise/pushFor/vocabulary fields; only the domain "expert" archetype does. Order: Skeptic first, domain experts middle, Anchor last.
 
 Leave recommendedPersonas as [] until ready=true.
 
@@ -248,8 +314,10 @@ export function buildPragmatistPrompt(
   context: { goal: string; values: string[]; constraints: string[] },
   language: AppLanguage = "en",
   otherPersonas: { id: string; name: string; role: string }[] = [],
+  panelContext: { otherName: string; otherLastMessage: string } | null = null,
 ): string {
-  const crossCheckSpec = buildCrossCheckSpec("pragmatist", otherPersonas);
+  const crossCheckSpec = panelContext ? "" : buildCrossCheckSpec("pragmatist", otherPersonas);
+  const panelBlock = buildPanelContextBlock(panelContext);
   const conversation = messages.length > 0
     ? messages.map((m) => `${m.role === "user" ? "USER" : "PRAGMATIST"}: ${m.content}`).join("\n\n")
     : "(conversation has not started — give your opening question now)";
@@ -293,7 +361,11 @@ Respond with ONLY valid JSON:
 
 ${CONCERNS_SPEC}
 
-${crossCheckSpec}${buildLanguageInstruction(language)}`;
+${crossCheckSpec}
+
+${panelBlock}
+
+${JUDGMENT_MOMENT_SPEC}${buildLanguageInstruction(language)}`;
 }
 
 export function buildStressTestPrompt(
@@ -301,8 +373,10 @@ export function buildStressTestPrompt(
   context: { goal: string; values: string[]; constraints: string[] },
   language: AppLanguage = "en",
   otherPersonas: { id: string; name: string; role: string }[] = [],
+  panelContext: { otherName: string; otherLastMessage: string } | null = null,
 ): string {
-  const crossCheckSpec = buildCrossCheckSpec("stress-test", otherPersonas);
+  const crossCheckSpec = panelContext ? "" : buildCrossCheckSpec("stress-test", otherPersonas);
+  const panelBlock = buildPanelContextBlock(panelContext);
   const conversation = messages.length > 0
     ? messages.map((m) => `${m.role === "user" ? "USER" : "STRESS_TEST"}: ${m.content}`).join("\n\n")
     : "(conversation has not started — open with a premortem question now)";
@@ -346,7 +420,11 @@ Respond with ONLY valid JSON:
 
 ${CONCERNS_SPEC}
 
-${crossCheckSpec}${buildLanguageInstruction(language)}`;
+${crossCheckSpec}
+
+${panelBlock}
+
+${JUDGMENT_MOMENT_SPEC}${buildLanguageInstruction(language)}`;
 }
 
 export function buildExpertPrompt(
@@ -360,8 +438,10 @@ export function buildExpertPrompt(
   expertise: string = "",
   pushFor: string = "",
   vocabulary: string[] = [],
+  panelContext: { otherName: string; otherLastMessage: string } | null = null,
 ): string {
-  const crossCheckSpec = buildCrossCheckSpec(selfId, otherPersonas);
+  const crossCheckSpec = panelContext ? "" : buildCrossCheckSpec(selfId, otherPersonas);
+  const panelBlock = buildPanelContextBlock(panelContext);
   const conversation = messages.length > 0
     ? messages.map((m) => `${m.role === "user" ? "USER" : "EXPERT"}: ${m.content}`).join("\n\n")
     : "(conversation has not started — open with a domain-grounded question now)";
@@ -415,7 +495,11 @@ Respond with ONLY valid JSON:
 
 ${CONCERNS_SPEC}
 
-${crossCheckSpec}${buildLanguageInstruction(language)}`;
+${crossCheckSpec}
+
+${panelBlock}
+
+${JUDGMENT_MOMENT_SPEC}${buildLanguageInstruction(language)}`;
 }
 
 export function buildSkepticPrompt(
@@ -423,8 +507,10 @@ export function buildSkepticPrompt(
   context: { goal: string; values: string[]; constraints: string[] },
   language: AppLanguage = "en",
   otherPersonas: { id: string; name: string; role: string }[] = [],
+  panelContext: { otherName: string; otherLastMessage: string } | null = null,
 ): string {
-  const crossCheckSpec = buildCrossCheckSpec("skeptic", otherPersonas);
+  const crossCheckSpec = panelContext ? "" : buildCrossCheckSpec("skeptic", otherPersonas);
+  const panelBlock = buildPanelContextBlock(panelContext);
   const conversation = messages.length > 0
     ? messages.map((m) => `${m.role === "user" ? "USER" : "SKEPTIC"}: ${m.content}`).join("\n\n")
     : "(conversation has not started — give your opening pushback now)";
@@ -480,7 +566,82 @@ ${CONCERNS_SPEC}
 
 ${crossCheckSpec}
 
+${panelBlock}
+
+${JUDGMENT_MOMENT_SPEC}
+
 When ready=true (after 3-6 substantive turns OR if user explicitly says they're done), set "summary" to a 1-2 sentence summary of the key vulnerabilities or assumptions the user grappled with. This goes into the tree analysis later.${buildLanguageInstruction(language)}`;
+}
+
+export function buildAnchorPrompt(
+  messages: { role: "setup" | "user"; content: string }[],
+  context: { goal: string; values: string[]; constraints: string[] },
+  language: AppLanguage = "en",
+  otherPersonas: { id: string; name: string; role: string }[] = [],
+  panelContext: { otherName: string; otherLastMessage: string } | null = null,
+  priorPersonaSummaries: { name: string; summary: string }[] = [],
+): string {
+  const crossCheckSpec = panelContext ? "" : buildCrossCheckSpec("anchor", otherPersonas);
+  const panelBlock = buildPanelContextBlock(panelContext);
+  const conversation = messages.length > 0
+    ? messages.map((m) => `${m.role === "user" ? "USER" : "ANCHOR"}: ${m.content}`).join("\n\n")
+    : "(conversation has not started — open with a synthesis question now)";
+
+  const priorBlock = priorPersonaSummaries.length > 0
+    ? `\nWHAT THE OTHER PERSONAS SURFACED:\n${priorPersonaSummaries
+        .map((p) => `- ${p.name}: ${p.summary}`)
+        .join("\n")}\n\nUse these explicitly. Reference personas by name when synthesizing. Don't pretend you don't know what they said.`
+    : "\n(No other personas have summarized yet. Ask the user what they've talked through so far before synthesizing.)";
+
+  return `You are Anchor, the synthesis persona in Cascade. The user has been pushed by other personas (Skeptic, domain experts, sometimes Pragmatist or Stress Test). Your job is NOT to push more. Your job is to wrap the conversation into something tangible the user can actually act on. You arrive last, and you bring the threads together.
+
+Your role has three moves:
+
+1. ASK ABOUT REAL CONSTRAINTS. Time available, frequency they can commit, energy budget, money budget, what's non-negotiable. Concrete numbers when possible. ("How many weekends until Thanksgiving?" "How many hours per week can you actually practice?" "What's your total food budget?") Without constraints, a plan is fantasy.
+
+2. SYNTHESIZE WHAT WAS SURFACED. Pull threads from other personas BY NAME. "Skeptic pushed on X. Chef said the technique gap is Y. Given those, here's what I'm hearing." Be specific to what each persona actually said, not generic.
+
+3. COMMIT TO A REALISTIC PLAN. Once you have constraints + synthesis, propose a concrete path with specific steps and timing. If the user's stated plan is unrealistic given the constraints, say so plainly with what would be realistic instead. Don't keep asking forever — commit when you've heard enough. End with a revision condition ("Reconsider if you find yourself spending more than X hours per week and still struggling").
+
+Style:
+- Calm, focused, warm. You're not adversarial.
+- Concrete questions about real constraints.
+- When you have a clear take, COMMIT to it. The user came here to converge, not to be pushed forever.
+- Reference other personas by name when synthesizing. ("Chef said you'd need X. Skeptic raised Y. Given your two-week timeline...")
+- Plan output should be tangible: specific steps, specific timing, specific commitments.
+
+Hard rules:
+- Never invent constraints the user hasn't stated. If you don't know how much time they have, ASK. Don't assume.
+- If the user's plan is unrealistic given what other personas said + the user's constraints, say so directly. "Given that Chef said this needs 6 weeks of practice and you have 2 weeks, the original plan won't work. Here's what would: [concrete alternative]."
+- Cap at 5 turns. By turn 5, set ready=true with a tangible plan summary in the "summary" field.
+- The "summary" at ready=true should be the PLAN itself, not a recap. Format: "Given [your constraints], the realistic path is [steps]. Reconsider if [revision condition]."
+- Use plain commas, periods, parentheses. Never em-dashes ("—") or en-dashes ("–"). Never semicolons. Sound like a person, not AI.
+
+CONTEXT FROM SETUP:
+- Goal: "${context.goal}"
+- Values: ${context.values.length > 0 ? context.values.join(", ") : "(none stated)"}
+- Constraints: ${context.constraints.length > 0 ? context.constraints.join(", ") : "(none stated)"}
+${priorBlock}
+
+CONVERSATION SO FAR:
+${conversation}
+
+Respond with ONLY valid JSON:
+{
+  "reply": "Your one synthesis-or-question turn (max 3 sentences).",
+  "options": [],
+  "ready": false,
+  "summary": "",
+  "concerns": []
+}
+
+${CONCERNS_SPEC}
+
+${crossCheckSpec}
+
+${panelBlock}
+
+${JUDGMENT_MOMENT_SPEC}${buildLanguageInstruction(language)}`;
 }
 
 export function buildCustomPersonaPrompt(
@@ -506,7 +667,8 @@ Output ONLY valid JSON in this exact shape:
   "archetype": "expert",
   "expertise": "<2-3 sentences naming the SPECIFIC body of knowledge this persona has: concepts they think in, the load-bearing distinctions in this field, what they actually pay attention to. Use real domain terms with names. Avoid generic platitudes.>",
   "pushFor": "<2-3 sentences on what THIS expert would push THIS user on, given the user's stated goal. Concrete and specific to the goal.>",
-  "vocabulary": ["<5-8 specific terms or concepts this persona would naturally use in conversation. Real domain vocabulary, not generic terms.>"]
+  "vocabulary": ["<5-8 specific terms or concepts this persona would naturally use in conversation. Real domain vocabulary, not generic terms.>"],
+  "accessory": "<one of: 'chef-hat', 'glasses', 'stethoscope', 'clipboard', 'book', 'briefcase', 'mortarboard', 'headphones', 'lab-coat', 'hard-hat', 'paintbrush', 'none'. Pick the one that best telegraphs this expert's role visually. Cooks/chefs: chef-hat. Doctors/nurses: stethoscope. Researchers/academics: book or mortarboard. Designers/artists: paintbrush. Engineers/construction: hard-hat. Lawyers/business: briefcase. Scientists/lab: lab-coat. Audio/podcast: headphones. PMs/operators: clipboard. 'glasses' is a safe generic for academics or analysts who don't fit elsewhere. 'none' only if nothing fits.>"
 }
 
 Rules for the SME persona:
@@ -514,6 +676,136 @@ Rules for the SME persona:
 - The expert MUST be plausible. If the user describes 'a 200-year-old wizard who is also a dentist', tone it down to the closest serious version (a long-experienced dentist) and ignore the fantasy element. The user is trying to talk to a real practitioner, not a roleplay character.
 - The expert uses domain-specific terminology naturally in their vocabulary list. They will explain terms only when the user signals confusion AND the term is genuinely complex AND it is load-bearing for the decision (this rule is enforced in the runtime persona prompt; you only need to provide the vocabulary).
 - Do NOT include any other fields beyond the schema above. Do not add commentary outside the JSON.${buildLanguageInstruction(language)}`;
+}
+
+/**
+ * Build a second-person narrative reconstructing what happened in the
+ * user's deliberation session. The output is a short story (4-6 short
+ * paragraphs) the user reads after the experience to map the territory
+ * of their own thinking. Not prescriptive. Not flattering. Grounded in
+ * specific moments from the conversation.
+ */
+export function buildNarrativePrompt(
+  session: {
+    goal: string;
+    briefMessages: { role: "setup" | "user"; content: string }[];
+    castConversations: Record<
+      string,
+      {
+        messages?: { role: "setup" | "user"; content: string }[];
+        ready?: boolean;
+        summary?: string;
+        concerns?: { kind: string; point: string; illustration: string; followupQuestion: string }[];
+      }
+    >;
+    recommendedPersonas: { id: string; name: string; role?: string; archetype?: string }[];
+    nodes: Record<
+      string,
+      {
+        id: string;
+        type: string;
+        label: string;
+        description?: string;
+        options?: { label: string; description?: string }[];
+        selectedOption?: string;
+        stakes?: string;
+        conflict?: string;
+        status?: string;
+      }
+    >;
+  },
+  language: AppLanguage = "en",
+): string {
+  // Build a structured serialization the LLM can reason over without
+  // having to re-decode the entire raw conversation tree.
+  const setupBlock = session.briefMessages.length
+    ? session.briefMessages
+        .map((m) => `${m.role === "user" ? "USER" : "SETUP"}: ${m.content}`)
+        .join("\n")
+    : "(no Setup conversation)";
+
+  const personaBlocks: string[] = [];
+  for (const rec of session.recommendedPersonas) {
+    const conv = session.castConversations[rec.id];
+    if (!conv || !conv.messages || conv.messages.length === 0) continue;
+    const turns = conv.messages
+      .map((m) => `${m.role === "user" ? "USER" : rec.name.toUpperCase()}: ${m.content}`)
+      .join("\n");
+    const concernsLine =
+      conv.concerns && conv.concerns.length > 0
+        ? `\n[${rec.name} surfaced: ${conv.concerns.map((c) => c.point).join("; ")}]`
+        : "";
+    const summaryLine = conv.summary ? `\n[${rec.name}'s closing summary: ${conv.summary}]` : "";
+    personaBlocks.push(
+      `=== ${rec.name} ${rec.role ? `(${rec.role})` : ""} ===\n${turns}${concernsLine}${summaryLine}`,
+    );
+  }
+  const personasBlock = personaBlocks.length
+    ? personaBlocks.join("\n\n")
+    : "(no cast persona conversations)";
+
+  const judgmentNodes = Object.values(session.nodes).filter((n) => n.type === "judgment");
+  const judgmentBlock = judgmentNodes.length
+    ? judgmentNodes
+        .map((n) => {
+          const chosen = n.selectedOption
+            ? n.options?.find((o, idx) => `opt-${idx}` === n.selectedOption || (o as { id?: string }).id === n.selectedOption)
+            : null;
+          const choiceText = chosen
+            ? `RESOLVED: chose "${chosen.label}"`
+            : n.status === "resolved"
+            ? "RESOLVED"
+            : "UNRESOLVED";
+          const optsText = (n.options || [])
+            .map((o) => `  - ${o.label}${o.description ? `: ${o.description}` : ""}`)
+            .join("\n");
+          return `Q: ${n.label}\n${n.stakes ? `Stakes: ${n.stakes}\n` : ""}${
+            n.conflict ? `Tradeoff: ${n.conflict}\n` : ""
+          }Options:\n${optsText}\n${choiceText}`;
+        })
+        .join("\n\n")
+    : "(no judgment nodes recorded)";
+
+  return `You are writing a SECOND-PERSON NARRATIVE summary of a user's deliberation session in Cascade. The user just spent time with a cast of personas working through a decision. Your job is to map the territory of what actually happened, in story form, so the user can read it back and see the shape of their own thinking.
+
+WRITE 4 to 6 SHORT PARAGRAPHS. No headings. No bullet points in the body. Prose throughout. Each paragraph is 2 to 4 sentences.
+
+THE ARC TO FOLLOW:
+
+1. WHAT YOU CAME IN WITH. Open with the question or notion the user walked in with. Quote a phrase from their first message if you can. Note what was vague or unsettled.
+
+2. HOW SETUP REFRAMED IT. What did Setup push on, and what got sharper as a result? Be specific. One concrete moment, not a summary.
+
+3. WHO PUSHED YOU AND ON WHAT. Walk through each persona by name. For each, name ONE specific push they made. If the user pushed back or refined their thinking in response, note that. Don't list every exchange, name the load-bearing moment.
+
+4. THE CHOICES YOU MADE. For each judgment node that fired, name the question, name the choice (if resolved), and where you can, infer the reasoning from what the user actually said in conversation. If a node is unresolved, say so plainly.
+
+5. WHAT CHANGED. One short paragraph reflecting on how the deliberation shifted the user's plan from where they started. Be honest. If the user mostly came out where they came in but with sharper reasons, say that. If a persona surfaced something they hadn't considered, name it.
+
+6. (Optional) WHAT YOU MIGHT WANT TO REVISIT. One last paragraph naming any unfinished thread, unresolved judgment, or persona whose pushback the user didn't fully address. Skip if everything got handled cleanly.
+
+VOICE RULES:
+- Second person throughout: "you came in with...", "you said...", "you chose..."
+- Grounded in specifics. Quote actual user words where possible. Use persona names by name (Skeptic, Pragmatist, the domain experts), not generic labels.
+- Not flattering. Not generic. Not prescriptive. You are reporting back, not advising.
+- Reflective, like a friend who watched the whole session and is telling you the story of what happened.
+- Plain language. No jargon.
+- Use commas, periods, parentheses. Never em-dashes ("—") or en-dashes ("–"). Never semicolons.
+
+SESSION DATA:
+
+GOAL: ${session.goal || "(not stated)"}
+
+SETUP CONVERSATION:
+${setupBlock}
+
+PERSONA CONVERSATIONS:
+${personasBlock}
+
+JUDGMENT NODES IN THE TREE:
+${judgmentBlock}
+
+Write the narrative now. Do NOT include a preamble. Begin directly with the first paragraph.${buildLanguageInstruction(language)}`;
 }
 
 export function buildCounterfactualPrompt(

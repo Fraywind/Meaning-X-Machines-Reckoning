@@ -30,11 +30,16 @@ export interface VoiceProfile {
 }
 
 export const PERSONA_VOICE_BUCKETS: Record<string, VoiceProfile> = {
-  // Universal personas. Locked-in voices so each archetype reads the same across sessions.
-  setup: { gender: "female", pitch: 1.0, rate: 0.95, bucket: "warm" },
-  skeptic: { gender: "male", pitch: 0.95, rate: 0.93, bucket: "sharp" },
-  pragmatist: { gender: "male", pitch: 1.0, rate: 0.97, bucket: "neutral" },
-  "stress-test": { gender: "female", pitch: 1.05, rate: 0.92, bucket: "older" },
+  // Universal personas with explicit Apple Premium voice preferences. Premium
+  // voices sound dramatically more natural than stock; fallback to scoring
+  // by gender/quality if the named voice isn't installed.
+  setup: { gender: "female", pitch: 1.0, rate: 0.95, bucket: "warm", voiceName: "Ava (Premium)" },
+  skeptic: { gender: "male", pitch: 0.95, rate: 0.93, bucket: "sharp", voiceName: "Daniel (Premium)" },
+  pragmatist: { gender: "male", pitch: 1.0, rate: 0.97, bucket: "neutral", voiceName: "Tom (Premium)" },
+  "stress-test": { gender: "female", pitch: 1.05, rate: 0.92, bucket: "older", voiceName: "Karen (Premium)" },
+  // Anchor: synthesis persona who wraps the conversation into a plan.
+  // Calm, focused voice distinct from the other universals.
+  anchor: { gender: "female", pitch: 0.98, rate: 0.93, bucket: "warm", voiceName: "Allison (Premium)" },
   // Expert (domain-specific) personas pick from a rotating pool. The picker
   // hashes the persona id so the same expert always reads in the same voice.
   expert: { gender: "female", pitch: 1.0, rate: 0.95, bucket: "young" },
@@ -116,10 +121,29 @@ function pickVoiceForPersona(personaId: string, profile: VoiceProfile): SpeechSy
   const voices = window.speechSynthesis.getVoices();
   if (!voices.length) return null;
 
-  // Explicit voice name takes priority.
+  // Explicit voice name takes priority. Try in tiers so a request for
+  // "Ava (Premium)" still finds "Ava (Enhanced)" or stock "Ava" as a
+  // fallback before scoring kicks in.
   if (profile.voiceName) {
+    // Tier 1: exact match.
     const exact = voices.find((v) => v.name === profile.voiceName);
     if (exact) return exact;
+    // Tier 2: substring match on the base name (e.g. "Ava (Premium)" -> "Ava").
+    const baseName = profile.voiceName
+      .replace(/\s*\(.*\)\s*$/, "")
+      .trim()
+      .toLowerCase();
+    if (baseName) {
+      // Prefer Premium / Enhanced variants of the same base name.
+      const enhanced = voices.find(
+        (v) =>
+          v.name.toLowerCase().includes(baseName) &&
+          /premium|enhanced|natural|neural/i.test(v.name),
+      );
+      if (enhanced) return enhanced;
+      const anyMatch = voices.find((v) => v.name.toLowerCase().includes(baseName));
+      if (anyMatch) return anyMatch;
+    }
   }
 
   // Score all voices.

@@ -5,6 +5,7 @@ import {
   buildPragmatistPrompt,
   buildStressTestPrompt,
   buildExpertPrompt,
+  buildAnchorPrompt,
 } from "@/lib/prompts";
 import { safeParseJson } from "@/lib/jsonRepair";
 
@@ -25,19 +26,42 @@ export async function POST(req: NextRequest) {
       expertise,
       pushFor,
       vocabulary,
+      panelContext,
+      priorPersonaSummaries,
     } = await req.json();
     const ctx = context || { goal: "", values: [], constraints: [] };
     const lang = language || "en";
     // If this persona has already fired a cross-check in this conversation, drop the spec.
     const others = crossCheckUsed ? [] : Array.isArray(otherPersonas) ? otherPersonas : [];
+    // Validate panel context shape before forwarding.
+    const pc =
+      panelContext && typeof panelContext.otherName === "string" && panelContext.otherName
+        ? {
+            otherName: panelContext.otherName,
+            otherLastMessage:
+              typeof panelContext.otherLastMessage === "string" ? panelContext.otherLastMessage : "",
+          }
+        : null;
+
+    // Validate prior summaries (passed only when this persona is Anchor).
+    const priorSums = Array.isArray(priorPersonaSummaries)
+      ? priorPersonaSummaries
+          .filter(
+            (s: { name?: string; summary?: string }) =>
+              s && typeof s.name === "string" && typeof s.summary === "string" && s.summary.trim(),
+          )
+          .map((s: { name: string; summary: string }) => ({ name: s.name, summary: s.summary }))
+      : [];
 
     let prompt = "";
     if (personaId === "skeptic" || archetype === "skeptic") {
-      prompt = buildSkepticPrompt(messages || [], ctx, lang, others);
+      prompt = buildSkepticPrompt(messages || [], ctx, lang, others, pc);
     } else if (personaId === "pragmatist" || archetype === "pragmatist") {
-      prompt = buildPragmatistPrompt(messages || [], ctx, lang, others);
+      prompt = buildPragmatistPrompt(messages || [], ctx, lang, others, pc);
     } else if (personaId === "stress-test" || archetype === "stress-test") {
-      prompt = buildStressTestPrompt(messages || [], ctx, lang, others);
+      prompt = buildStressTestPrompt(messages || [], ctx, lang, others, pc);
+    } else if (personaId === "anchor" || archetype === "anchor") {
+      prompt = buildAnchorPrompt(messages || [], ctx, lang, others, pc, priorSums);
     } else {
       // Domain-specific or unknown → Expert with role injection + dossier priming
       // (expertise/pushFor/vocabulary) so the persona reads as a real practitioner.
@@ -54,6 +78,7 @@ export async function POST(req: NextRequest) {
         typeof expertise === "string" ? expertise : "",
         typeof pushFor === "string" ? pushFor : "",
         Array.isArray(vocabulary) ? vocabulary.filter((v) => typeof v === "string") : [],
+        pc,
       );
     }
 

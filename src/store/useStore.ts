@@ -25,6 +25,16 @@ export interface BriefMessage {
   role: "setup" | "user";
   content: string;
   options?: string[];
+  // When a persona's turn surfaces a value-laden fork the user must decide,
+  // the persona attaches a judgmentMoment. The bubble renders distinctly
+  // and a judgment node gets added to the tree state at the same time.
+  judgmentMoment?: {
+    nodeId: string;
+    question: string;
+    stakes: string;
+    conflict: string;
+    options: { label: string; description?: string; tradeoffs?: string[]; consequences?: string[] }[];
+  };
 }
 
 export interface PersonaConcern {
@@ -114,12 +124,24 @@ interface AppState {
     expertise?: string;
     pushFor?: string;
     vocabulary?: string[];
+    accessory?: string;
   }[];
   // A pending check-in from one persona suggesting another would have a take.
   // At most one active at a time. Cleared when user clicks the glow or switches personas.
   pendingCrossCheck: { fromPersonaId: string; targetPersonaId: string; oneLineTake: string } | null;
   // Track which (from→to) pairs have already fired a cross-check, capped at 1 per conversation.
   crossCheckHistory: string[];
+  // Panel mode: user-moderated dialogue between two personas. Only available
+  // after at least 2 cast personas have reached ready=true. The user controls
+  // every turn (clicks an avatar to make that persona respond). 4-turn soft
+  // budget. Direct address between personas only when there's real substance.
+  panelMode: boolean;
+  panelPersonaIds: [string, string] | null;
+  panelMessages: { role: "user" | "persona"; personaId?: string; content: string }[];
+  panelTurnsUsed: number;
+  panelLoadingPersona: string | null;
+  // Narrative view: end-of-experience second-person story of the session.
+  narrativeOpen: boolean;
 
   // Actions
   setGoalText: (text: string) => void;
@@ -162,9 +184,14 @@ interface AppState {
   setCastLoading: (personaId: string, v: boolean) => void;
   setCurrentCastPersona: (id: string | null) => void;
   markCastVisited: (id: string) => void;
-  setRecommendedPersonas: (list: { id: string; name: string; role: string; archetype: string; expertise?: string; pushFor?: string; vocabulary?: string[] }[]) => void;
+  setRecommendedPersonas: (list: { id: string; name: string; role: string; archetype: string; expertise?: string; pushFor?: string; vocabulary?: string[]; accessory?: string }[]) => void;
   setPendingCrossCheck: (cc: { fromPersonaId: string; targetPersonaId: string; oneLineTake: string } | null) => void;
   clearPendingCrossCheck: () => void;
+  enterPanelMode: (ids: [string, string]) => void;
+  exitPanelMode: () => void;
+  addPanelMessage: (m: { role: "user" | "persona"; personaId?: string; content: string }) => void;
+  setPanelLoadingPersona: (id: string | null) => void;
+  setNarrativeOpen: (v: boolean) => void;
   resetCast: () => void;
   // Session management
   saveCurrentSession: () => void;
@@ -262,6 +289,12 @@ export const useStore = create<AppState>((set, get) => ({
   recommendedPersonas: [],
   pendingCrossCheck: null,
   crossCheckHistory: [],
+  panelMode: false,
+  panelPersonaIds: null,
+  panelMessages: [],
+  panelTurnsUsed: 0,
+  panelLoadingPersona: null,
+  narrativeOpen: false,
 
   setGoalText: (text) => set({ goalText: text }),
   setIsDecomposing: (v) => set({ isDecomposing: v }),
@@ -475,6 +508,30 @@ export const useStore = create<AppState>((set, get) => ({
         : { pendingCrossCheck: null },
     ),
   clearPendingCrossCheck: () => set({ pendingCrossCheck: null }),
+  enterPanelMode: (ids) =>
+    set({
+      panelMode: true,
+      panelPersonaIds: ids,
+      panelMessages: [],
+      panelTurnsUsed: 0,
+      panelLoadingPersona: null,
+      currentCastPersona: null,
+    }),
+  exitPanelMode: () =>
+    set({
+      panelMode: false,
+      panelPersonaIds: null,
+      panelMessages: [],
+      panelTurnsUsed: 0,
+      panelLoadingPersona: null,
+    }),
+  addPanelMessage: (m) =>
+    set((s) => ({
+      panelMessages: [...s.panelMessages, m],
+      panelTurnsUsed: m.role === "persona" ? s.panelTurnsUsed + 1 : s.panelTurnsUsed,
+    })),
+  setPanelLoadingPersona: (id) => set({ panelLoadingPersona: id }),
+  setNarrativeOpen: (v) => set({ narrativeOpen: v }),
 
   resetCast: () =>
     set({
@@ -484,6 +541,11 @@ export const useStore = create<AppState>((set, get) => ({
       recommendedPersonas: [],
       pendingCrossCheck: null,
       crossCheckHistory: [],
+      panelMode: false,
+      panelPersonaIds: null,
+      panelMessages: [],
+      panelTurnsUsed: 0,
+      panelLoadingPersona: null,
     }),
 
   saveCurrentSession: () => {
@@ -584,6 +646,11 @@ export const useStore = create<AppState>((set, get) => ({
       recommendedPersonas: [],
       pendingCrossCheck: null,
       crossCheckHistory: [],
+      panelMode: false,
+      panelPersonaIds: null,
+      panelMessages: [],
+      panelTurnsUsed: 0,
+      panelLoadingPersona: null,
     });
   },
 }));

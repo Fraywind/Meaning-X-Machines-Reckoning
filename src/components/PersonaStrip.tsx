@@ -246,17 +246,44 @@ export default function PersonaStrip({ activeId }: Props) {
             </button>
             {isCrossCheckTarget && (
               <motion.div
-                initial={{ opacity: 0, y: -4 }}
-                animate={{ opacity: 1, y: 0 }}
-                className={`absolute left-0 top-full mt-1.5 w-60 max-w-[16rem] p-2 rounded-lg bg-cosmos-surface/95 backdrop-blur-md border ${c.activeBorder} shadow-xl z-50 pointer-events-none`}
+                initial={{ opacity: 0, y: -6, scale: 0.96 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ duration: 0.35, ease: "easeOut" }}
+                className={`absolute left-0 top-full mt-2 w-[20rem] max-w-[22rem] rounded-xl bg-cosmos-surface backdrop-blur-md border-2 ${c.activeBorder} shadow-2xl z-50 overflow-hidden`}
               >
-                <div className={`text-[8px] uppercase tracking-wider ${c.activeText} font-semibold mb-1`}>
-                  {p.name} would add
+                {/* Header bar with pulsing dot, persona name, and "ringing" status */}
+                <div className={`flex items-center gap-2 px-3.5 py-2 ${c.activeBg} border-b ${c.activeBorder}`}>
+                  <motion.svg
+                    viewBox="0 0 8 8"
+                    className={`w-2 h-2 ${c.activeText}`}
+                    animate={{ scale: [1, 1.4, 1], opacity: [0.7, 1, 0.7] }}
+                    transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
+                  >
+                    <circle cx="4" cy="4" r="3" fill="currentColor" />
+                  </motion.svg>
+                  <span className={`text-[10px] uppercase tracking-[0.2em] ${c.activeText} font-bold`}>
+                    {p.name} is ringing in
+                  </span>
                 </div>
-                <p className="text-[11px] text-cosmos-text/85 leading-snug">
-                  {pendingCrossCheck!.oneLineTake}
-                </p>
-                <p className="text-[9px] text-cosmos-muted/60 mt-1.5">Click avatar to hear them.</p>
+                {/* The take itself, prominent and readable */}
+                <div className="px-4 py-3.5">
+                  <p className="text-[14px] text-cosmos-text leading-relaxed font-medium">
+                    {pendingCrossCheck!.oneLineTake}
+                  </p>
+                </div>
+                {/* CTA: stop propagation so click goes here, not to the
+                    underlying button. handleClick still fires below to
+                    switch personas and clear the pending state. */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleClick(p.id);
+                  }}
+                  className={`w-full px-4 py-2.5 ${c.activeBg} ${c.activeText} text-[12px] font-semibold border-t ${c.activeBorder} hover:brightness-110 active:brightness-95 transition-all flex items-center justify-center gap-2`}
+                >
+                  Take the call from {p.name}
+                  <span className="text-[10px]">→</span>
+                </button>
               </motion.div>
             )}
           </div>

@@ -3,9 +3,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Gamepad2,
-  GraduationCap,
-  Home,
   ShieldAlert,
   ChevronDown,
   BookOpen,
@@ -14,6 +11,8 @@ import { useStore } from "@/store/useStore";
 import ModePicker from "./ModePicker";
 import SetupPanel from "./SetupPanel";
 import CastPersonaPanel, { CastPersonaConfig } from "./CastPersonaPanel";
+import PanelView from "./PanelView";
+import NarrativeView from "./NarrativeView";
 import SkepticCharacter from "./personas/SkepticCharacter";
 import PragmatistCharacter from "./personas/PragmatistCharacter";
 import StressTestCharacter from "./personas/StressTestCharacter";
@@ -21,7 +20,7 @@ import ExpertCharacter from "./personas/ExpertCharacter";
 import { safeFetch } from "@/lib/api";
 import Starfield from "./Starfield";
 import ThemeSwitcher from "./ThemeSwitcher";
-import { LANGUAGES } from "@/lib/i18n";
+// Language picker removed; the app is English-only.
 
 /** Map archetype id to Character component. Unknown archetypes fall back to ExpertCharacter. */
 // Trim the user's goal to a short, lowercase fragment that reads naturally
@@ -34,12 +33,16 @@ function shortGoal(goal: string): string {
     .replace(/^(i\s+want\s+to|i'm\s+trying\s+to|i\s+am\s+trying\s+to|how\s+do\s+i|should\s+i|can\s+i|i\s+need\s+to|let's|deciding\s+whether\s+to|figuring\s+out\s+whether\s+to)\s+/i, "")
     .replace(/[?.!]+$/, "")
     .toLowerCase();
-  // Cap length so it slots into a sentence cleanly.
-  return cleaned.length > 80 ? cleaned.slice(0, 80) + "..." : cleaned;
+  if (cleaned.length <= 80) return cleaned;
+  // Cut at the nearest word boundary so we don't truncate mid-word
+  // (e.g. "indian vegetari..." reads worse than "for a group...").
+  const wordCutoff = cleaned.lastIndexOf(" ", 80);
+  const safeCutoff = wordCutoff > 40 ? wordCutoff : 80;
+  return cleaned.slice(0, safeCutoff).trimEnd() + "...";
 }
 
 function buildCastPersonaConfig(
-  rec: { id: string; name: string; role: string; archetype: string },
+  rec: { id: string; name: string; role: string; archetype: string; accessory?: string },
   goal: string = "",
 ): CastPersonaConfig {
   let CharacterComponent: React.ComponentType<{ thinking: boolean }>;
@@ -81,11 +84,28 @@ function buildCastPersonaConfig(
         "What do most people in this situation miss?",
       ];
       break;
-    default:
-      // Domain-specific or unknown → Expert with name-derived accent color
+    case "anchor":
+      // Reuse ExpertCharacter with a clipboard accessory so Anchor reads
+      // visually as the synthesizer-with-a-plan.
       // eslint-disable-next-line react/display-name
       CharacterComponent = ({ thinking }: { thinking: boolean }) => (
-        <ExpertCharacter thinking={thinking} accentSeed={rec.name} />
+        <ExpertCharacter thinking={thinking} accentSeed="anchor" accessory="clipboard" />
+      );
+      openingMessage =
+        "I'm here to wrap this up. Before we land on a plan, I need to understand your real constraints. How much time do you actually have, and how much of it can you commit to this?";
+      openingOptions = [
+        "Walk me through the constraints",
+        "Tell me what's realistic given everything that's been said",
+        "I'm not sure I have a workable plan yet",
+      ];
+      break;
+    default:
+      // Domain-specific or unknown → Expert with name-derived accent color
+      // and an optional role-based accessory (chef hat, glasses, etc.) so
+      // each domain expert reads visually distinct.
+      // eslint-disable-next-line react/display-name
+      CharacterComponent = ({ thinking }: { thinking: boolean }) => (
+        <ExpertCharacter thinking={thinking} accentSeed={rec.name} accessory={rec.accessory} />
       );
       // Substantive opener: poses a real domain-flavored question instead
       // of introducing themselves and handing the work back to the user.
@@ -130,16 +150,30 @@ export default function GoalInput() {
     briefExtracted,
     recommendedPersonas,
     briefMessages,
+    panelMode,
+    panelPersonaIds,
+    exitPanelMode,
+    narrativeOpen,
+    setNarrativeOpen,
   } = useStore();
 
   useEffect(() => {
     loadSessionsFromStorage();
+    // Cascade is always Standard depth. Force quickMode off on mount
+    // in case it was persisted to true from a prior session.
+    useStore.getState().setQuickMode(false);
   }, [loadSessionsFromStorage]);
 
   const examples = [
-    { text: "Build and launch an educational product for 3-5 year olds to help learn ABCs", icon: Gamepad2 },
-    { text: "How should a public university restructure its tuition model to make it affordable?", icon: GraduationCap },
-    { text: "Should I sell my $1.2M house in Hollywood and relocate to New York City?", icon: Home },
+    {
+      text: "I want to build a learning tool for 3-5 year olds, but I'm worried I'll just add another mediocre app to a crowded market. How should I think about whether to actually pursue this, given my background isn't in early childhood education?",
+    },
+    {
+      text: "I've been offered a senior role at a nonprofit doing work I deeply care about. The pay is half what I make now. We have two kids and a mortgage. I have until next Friday. I want to plan out whether I should take it.",
+    },
+    {
+      text: "I want to plan how to host Thanksgiving this year. I've never hosted before and I suck at cooking. My friend's parents are coming and they're Indian vegetarian. Honestly the whole thing is stressing me out. I want to figure out whether to actually pull this off or bail, because I have no idea how to make a vegetarian Thanksgiving everyone will actually enjoy.",
+    },
   ];
 
   const startDecomposition = useCallback(
@@ -235,22 +269,9 @@ export default function GoalInput() {
     <div className="relative h-screen overflow-y-auto">
       <Starfield />
 
-      {/* Top right: language + theme. Hidden once the user enters Setup or
-          a cast persona, so the deliberation flow stays uncluttered. */}
+      {/* Top right: theme only. Language was removed; the app is English-only. */}
       {briefMessages.length === 0 && !currentCastPersona && (
         <div className="fixed top-4 right-4 z-30 flex items-center gap-2">
-          <select
-            value={useStore.getState().language}
-            onChange={(e) => useStore.getState().setLanguage(e.target.value as "en" | "zh" | "hi" | "es")}
-            className="bg-cosmos-surface/80 border border-cosmos-border rounded-lg px-1.5 py-1 text-xs text-cosmos-text focus:outline-none focus:border-cosmos-glow/50 cursor-pointer"
-            title="Language"
-          >
-            {LANGUAGES.map((l) => (
-              <option key={l.id} value={l.id}>
-                {l.label}
-              </option>
-            ))}
-          </select>
           <div className="[&_button]:border-cosmos-glow/30 [&_button]:text-cosmos-text/70">
             <ThemeSwitcher />
           </div>
@@ -365,31 +386,23 @@ export default function GoalInput() {
                         What is Cascade?
                       </h3>
                       <p>
-                        Cascade is a structured deliberation tool. You describe a complex goal or task, and the AI
-                        breaks it down into a decision tree of sub-decisions, consequences, dependencies, and paths
-                        you might not have considered.
+                        Cascade is a structured deliberation tool. You describe a complex goal or decision, and instead of getting back a single confident answer, you talk it through with a small cast of personas before any structured plan is generated. Each persona pushes your thinking from a specific angle.
                       </p>
                       <p className="mt-2">
-                        The difference from a typical AI conversation is what happens at decision points. Complex
-                        tasks are full of nuances and details that are easy to overlook or not even realize are there.
-                        Normally, AI just assumes or skips over these, and those silent assumptions can have real
-                        consequences downstream. In any complex goal, there will be moments where a decision comes
-                        down to tradeoffs and preferences, and those choices have a cascading effect on everything
-                        that follows. When the AI reaches one of those moments,
-                        <span className="text-cosmos-text"> it detects it, surfaces the conflict and tradeoffs, and
-                        brings it to you.</span> You make the judgment call. Your intent drives what happens next.
+                        The difference from a typical AI conversation is what happens at the points that actually require you. Complex decisions are full of moments where the right answer depends on what you value, not on what is true. A normal chatbot quietly absorbs those moments and gives you a recommendation. Cascade does the opposite. When a persona reaches one of those moments,
+                        <span className="text-cosmos-text"> it surfaces the conflict and the tradeoffs, flags it as a judgment moment, and adds it as a node on your decision tree right then.</span> The tree builds up live as you talk. You make every judgment call yourself.
                       </p>
                       <p className="mt-2">
-                        As you work through decisions, a <span className="text-cosmos-text/80">Values Mirror</span> tracks
-                        what your choices reveal about your priorities and where they are in tension with each other.
-                        The tool also surfaces periodic reflections on patterns in how you are deciding. You can set
-                        constraints up front (budget, timeline, dealbreakers) so the AI factors them in throughout.
-                        When you are done, the output is a fully structured plan you can reference, document,
-                        or export as a prompt to build through your preferred AI tool.
+                        The cast has two kinds of personas. The first kind is universal: <span className="text-cosmos-text/80">Skeptic</span> challenges your reasoning, <span className="text-cosmos-text/80">Pragmatist</span> asks what you actually do tomorrow morning, <span className="text-cosmos-text/80">Stress Test</span> imagines this has already failed and asks why. The second kind is domain-specific. Setup looks at your goal and recommends real subject matter experts (an early childhood educator if you are building for kids, a financial planner if you are weighing a job offer) with a generated dossier of the concepts and language a real practitioner thinks in. You can also add your own expert by describing them, and they get added to the cast.
+                      </p>
+                      <p className="mt-2">
+                        Each persona has a voice (you can read their messages aloud, hold Space to talk back, or both). After at least two personas have pushed on you, a Panel mode unlocks where you can put any two of them in the same room and moderate a conversation between them. When you finish, you can also read a second-person narrative of what happened in your session, which the tool generates from your actual exchanges.
+                      </p>
+                      <p className="mt-2">
+                        As you work, a <span className="text-cosmos-text/80">Values Mirror</span> tracks what your choices reveal about your priorities and where they are in tension. You can set constraints up front (budget, timeline, dealbreakers) and the personas will factor them in. The final output is a structured plan you can reference, document, or export as a prompt to build through your preferred AI tool.
                       </p>
                       <p className="mt-2 text-cosmos-muted/60 text-xs">
-                        There is a quick mode if you are short on time, but the standard experience is where
-                        Cascade is most useful. Taking the time to sit with each decision is the point.
+                        There is a quick mode if you are short on time, but the standard experience is where Cascade is most useful. Sitting with each decision, and being pushed before you commit, is the point.
                       </p>
                     </div>
 
@@ -398,14 +411,15 @@ export default function GoalInput() {
                         How to use it
                       </h3>
                       <ol className="space-y-2.5 text-cosmos-muted list-decimal list-inside">
-                        <li><span className="text-cosmos-text/80">Setup will ask what you are trying to decide.</span> Give it as much detail and context as you want — a sentence or a paragraph both work. The more specific you are, the better the output.</li>
-                        <li>The AI breaks your goal down into a decision tree. Any point that requires a nuanced human call, something that depends on your values, intent, or priorities, gets flagged and brought back to you.</li>
-                        <li><span className="text-cosmos-judgment">Highlighted nodes</span> are those judgment points. Click <span className="text-cosmos-text/80">&ldquo;Decide now&rdquo;</span> to see the options, tradeoffs, blind spots, and what is at stake. You decide which direction to go.</li>
-                        <li>If none of the options fit, you can clarify your situation and redirect the AI. Your choices cascade forward, generating new branches and sometimes surfacing new conflicts.</li>
-                        <li>Once all decisions are resolved, the output is a fully laid out plan you can reference, document, or export as a prompt to build through your preferred AI tool.</li>
+                        <li><span className="text-cosmos-text/80">Setup asks what you are trying to decide.</span> Give it as much context as you want, a sentence or a paragraph both work. Setup pushes back on a few of the assumptions in your phrasing and helps you sharpen the question.</li>
+                        <li><span className="text-cosmos-text/80">Setup hands you off to a recommended cast of personas.</span> Skeptic is almost always first, alongside two or three domain experts tailored to your goal. You can also add a specific expert of your own from the cast list.</li>
+                        <li>You talk to each persona one at a time. They push from their specific angle, and along the way they may flag <span className="text-cosmos-judgment">judgment moments</span>. Those are the moments where the choice is yours, not the AI's. They get highlighted and added to your tree live.</li>
+                        <li>After at least two personas have pushed on you, the tree opens. You can also enter <span className="text-cosmos-text/80">Panel mode</span> to put any two ready personas in the same room and moderate a conversation between them.</li>
+                        <li>Each judgment node on the tree shows the options, tradeoffs, and what is at stake. You decide. If none of the options fit, you can clarify and redirect, and the tree grows from there.</li>
+                        <li>When you are done, you can read the <span className="text-cosmos-text/80">story of what happened</span> in your session, a second-person narrative drawn from your actual exchanges, or export the structured plan.</li>
                       </ol>
                       <p className="mt-3 text-cosmos-muted/60 text-xs italic">
-                        Tip: Open the <span className="text-cosmos-text/70">Values Mirror</span> at any point to see what your decisions reveal about your priorities and how they connect to your choices.
+                        Tip: hold <kbd className="px-1 py-0.5 rounded border border-cosmos-border/50 text-cosmos-muted/70 font-mono text-[10px]">Space</kbd> anywhere in a persona conversation to talk instead of typing. Click the volume icon next to any persona message to hear it read aloud in their voice.
                       </p>
                     </div>
                   </div>
@@ -440,7 +454,7 @@ export default function GoalInput() {
                       <p>
                         Judgment isn&apos;t about what <em>can</em> be done. It&apos;s about
                         what <em>should</em> be done, and being willing to stand behind that call. This capacity
-                        is uniquely human &mdash; it comes from lived experience, caring about outcomes, and
+                        is uniquely human, and it comes from lived experience, caring about outcomes, and
                         understanding what&apos;s at stake for the people involved.
                         Smith&apos;s argument was that AI will produce world-changing reckoning systems, but nothing
                         in AI today comes close to what genuine judgment requires.
@@ -487,32 +501,8 @@ export default function GoalInput() {
           {/* Mode picker (Tree / Notebook / Dialogue) */}
           <ModePicker />
 
-          {/* Standard / Quick — small mode selector above Setup */}
-          <div className="mb-3 flex items-center justify-end gap-2">
-            <span className="text-[10px] text-cosmos-muted/40 uppercase tracking-wider mr-1">
-              Depth
-            </span>
-            <button
-              onClick={() => useStore.getState().setQuickMode(false)}
-              className={`px-2.5 py-1 text-[11px] rounded-lg border transition-all ${
-                !useStore.getState().quickMode
-                  ? "bg-cosmos-glow/15 border-cosmos-glow/40 text-cosmos-glow"
-                  : "border-cosmos-border/30 text-cosmos-muted/50 hover:border-cosmos-glow/20 hover:text-cosmos-muted"
-              }`}
-            >
-              Standard
-            </button>
-            <button
-              onClick={() => useStore.getState().setQuickMode(true)}
-              className={`px-2.5 py-1 text-[11px] rounded-lg border transition-all ${
-                useStore.getState().quickMode
-                  ? "bg-cosmos-muted/15 border-cosmos-muted/30 text-cosmos-muted"
-                  : "border-cosmos-border/30 text-cosmos-muted/50 hover:border-cosmos-muted/20 hover:text-cosmos-muted"
-              }`}
-            >
-              Quick
-            </button>
-          </div>
+          {/* Depth selector removed. Cascade is always Standard depth.
+              quickMode is forced to false on mount below. */}
 
           {/* Setup persona — replaces the textarea entry */}
           <motion.div
@@ -560,7 +550,7 @@ export default function GoalInput() {
       </motion.div>
 
       {/* Cast persona room — opens on top of SetupPanel when a persona is summoned */}
-      {currentCastPersona && (() => {
+      {currentCastPersona && !panelMode && (() => {
         const rec = recommendedPersonas.find((p) => p.id === currentCastPersona);
         if (!rec) return null;
         const config = buildCastPersonaConfig(rec, briefExtracted.goal || "");
@@ -574,6 +564,26 @@ export default function GoalInput() {
             onClose={() => setCurrentCastPersona(null)}
           />
         );
+      })()}
+
+      {/* Narrative view: end-of-experience second-person story of the session. */}
+      {narrativeOpen && <NarrativeView onClose={() => setNarrativeOpen(false)} />}
+
+      {/* Panel mode: two personas, user moderates. Only opens when user
+          explicitly toggles it from CastPersonaPanel and at least 2 cast
+          personas are ready. */}
+      {panelMode && panelPersonaIds && (() => {
+        const recA = recommendedPersonas.find((p) => p.id === panelPersonaIds[0]);
+        const recB = recommendedPersonas.find((p) => p.id === panelPersonaIds[1]);
+        if (!recA || !recB) {
+          // Defensive: if a panel persona was lost (cast reset etc.), exit cleanly.
+          exitPanelMode();
+          return null;
+        }
+        const goal = briefExtracted.goal || "";
+        const cfgA = buildCastPersonaConfig(recA, goal);
+        const cfgB = buildCastPersonaConfig(recB, goal);
+        return <PanelView configs={[cfgA, cfgB]} onClose={exitPanelMode} />;
       })()}
     </div>
   );

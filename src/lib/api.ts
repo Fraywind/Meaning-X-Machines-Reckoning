@@ -27,7 +27,20 @@ export async function safeFetch(url: string, body: Record<string, unknown>) {
   if (!contentType.includes("application/json")) {
     const text = await res.text();
     console.error(`API returned non-JSON (${res.status}):`, text.slice(0, 200));
-    return { error: `Server error (${res.status}). Check that your ANTHROPIC_API_KEY is set in .env.local` };
+    // Distinguish the common causes so the error message points at the
+    // actual problem instead of always blaming the API key.
+    let hint: string;
+    if (res.status === 404) {
+      hint =
+        "Route returned 404. This usually means the Next.js dev server was hot-rebuilding when the request fired. Try the action again in a moment.";
+    } else if (res.status >= 500) {
+      hint = `Server error (${res.status}). Check the dev server logs. If the error mentions Anthropic, your ANTHROPIC_API_KEY in .env.local may be missing or invalid.`;
+    } else if (res.status === 401 || res.status === 403) {
+      hint = `Auth error (${res.status}). Your ANTHROPIC_API_KEY in .env.local is missing or invalid.`;
+    } else {
+      hint = `Unexpected response (${res.status}). Check the dev server logs.`;
+    }
+    return { error: hint };
   }
 
   return res.json();

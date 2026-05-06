@@ -156,6 +156,36 @@ const STRESS_TEST: PersonaColorSet = {
   chipPrimaryHoverBorder: "hover:border-cosmos-conflict/60",
 };
 
+const ANCHOR: PersonaColorSet = {
+  activeBg: "bg-cosmos-resolved/20",
+  activeBorder: "border-cosmos-resolved/55",
+  activeText: "text-cosmos-resolved",
+  idleBorder: "border-cosmos-border/40",
+  idleText: "text-cosmos-muted",
+  bubbleBg: "bg-cosmos-resolved/10",
+  bubbleBorder: "border-cosmos-resolved/25",
+  inputFocusBorder: "focus:border-cosmos-resolved/40",
+  sendBg: "bg-cosmos-resolved/15",
+  sendBorder: "border-cosmos-resolved/30",
+  sendText: "text-cosmos-resolved",
+  sendHoverBg: "hover:bg-cosmos-resolved/25",
+  surfacedBg: "bg-cosmos-resolved/8",
+  surfacedBorder: "border-cosmos-resolved/30",
+  surfacedLabel: "text-cosmos-resolved/70",
+  characterGradientFrom: "from-cosmos-bg",
+  characterGradientTo: "to-cosmos-resolved/12",
+  chipBg: "bg-transparent",
+  chipBorder: "border-cosmos-border/40",
+  chipText: "text-cosmos-muted/70",
+  chipHoverBg: "hover:bg-cosmos-resolved/8",
+  chipHoverBorder: "hover:border-cosmos-resolved/35",
+  chipPrimaryBg: "bg-cosmos-resolved/15",
+  chipPrimaryBorder: "border-cosmos-resolved/45",
+  chipPrimaryText: "text-cosmos-resolved",
+  chipPrimaryHoverBg: "hover:bg-cosmos-resolved/25",
+  chipPrimaryHoverBorder: "hover:border-cosmos-resolved/60",
+};
+
 const EXPERT: PersonaColorSet = {
   activeBg: "bg-cosmos-resolved/15",
   activeBorder: "border-cosmos-resolved/45",
@@ -191,6 +221,7 @@ export const PERSONA_COLORS: Record<string, PersonaColorSet> = {
   skeptic: SKEPTIC,
   pragmatist: PRAGMATIST,
   "stress-test": STRESS_TEST,
+  anchor: ANCHOR,
   expert: EXPERT,
 };
 

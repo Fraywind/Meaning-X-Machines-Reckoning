@@ -2,16 +2,17 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, Send, Loader2, X, Mic, MicOff } from "lucide-react";
+import { ArrowRight, Send, Loader2, X, Mic, MicOff, Volume2, VolumeX } from "lucide-react";
 import { useStore, BriefMessage } from "@/store/useStore";
 import { safeFetch } from "@/lib/api";
 import { getLanguageConfig } from "@/lib/i18n";
+import { useTextToSpeech, getVoiceProfile } from "@/lib/useTextToSpeech";
 import PersonaStrip from "./PersonaStrip";
 
 interface Props {
   onReady: (goal: string, values: string[], constraints: string[]) => void;
   onSummonPersona: (personaId: string) => void;
-  examples: { text: string; icon: React.ComponentType<{ className?: string }> }[];
+  examples: { text: string }[];
 }
 
 /** Small inline sigil for the initial card state */
@@ -229,11 +230,14 @@ function SetupCharacter({ thinking }: { thinking: boolean }) {
   );
 }
 
-function Bubble({ message, isLatest, onChipClick, disabled }: {
+function Bubble({ message, isLatest, onChipClick, disabled, onSpeak, isSpeaking, ttsSupported }: {
   message: BriefMessage;
   isLatest: boolean;
   onChipClick: (text: string) => void;
   disabled: boolean;
+  onSpeak?: () => void;
+  isSpeaking?: boolean;
+  ttsSupported?: boolean;
 }) {
   const isSetup = message.role === "setup";
   const [showChips, setShowChips] = useState(false);
@@ -243,7 +247,10 @@ function Bubble({ message, isLatest, onChipClick, disabled }: {
     if (!isLatest || !isSetup) return;
     setShowChips(false);
     setOfferHelp(false);
-    const t = setTimeout(() => setOfferHelp(true), 8000);
+    // Suggest-responses link only appears after a full minute of inactivity.
+    // The default behavior is the user types or talks; chips are a fallback
+    // for genuine stuckness, not a quick shortcut.
+    const t = setTimeout(() => setOfferHelp(true), 60000);
     return () => clearTimeout(t);
   }, [isLatest, isSetup, message.content]);
 
@@ -254,7 +261,7 @@ function Bubble({ message, isLatest, onChipClick, disabled }: {
       transition={{ duration: 0.25 }}
       className="space-y-2"
     >
-      <div className={`flex ${isSetup ? "justify-start" : "justify-end"}`}>
+      <div className={`flex ${isSetup ? "justify-start" : "justify-end"} items-end gap-1.5`}>
         <div
           className={`max-w-[85%] px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed ${
             isSetup
@@ -264,6 +271,20 @@ function Bubble({ message, isLatest, onChipClick, disabled }: {
         >
           {message.content}
         </div>
+        {isSetup && ttsSupported && onSpeak && (
+          <button
+            onClick={onSpeak}
+            aria-label={isSpeaking ? "Stop speaking" : "Listen"}
+            className={`flex-shrink-0 p-1.5 rounded-full transition-all ${
+              isSpeaking
+                ? "bg-cosmos-glow/15 text-cosmos-glow"
+                : "text-cosmos-muted/40 hover:text-cosmos-glow hover:bg-cosmos-glow/8"
+            }`}
+            title={isSpeaking ? "Stop" : "Read aloud"}
+          >
+            {isSpeaking ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+          </button>
+        )}
       </div>
 
       {/* Chips are opt-in: a "Suggest responses" link appears after silence,
@@ -489,18 +510,13 @@ function ReadyActions({
         </div>
       )}
 
-      {/* Secondary: skip personas, gated until at least MIN_PERSONAS are ready */}
-      {gateOpen ? (
-        <p className="text-[11px] text-cosmos-muted/50 pt-1">
-          Or{" "}
-          <button onClick={onOpenTree} className="text-cosmos-glow/70 hover:text-cosmos-glow underline underline-offset-2">
-            skip to the tree
-          </button>{" "}
-          directly. You can always keep adding context below.
-        </p>
-      ) : (
+      {/* Setup never offers a tree-opening affordance. The tree opens from
+          inside CastPersonaPanel's ready-state, after the user has actually
+          been pushed by personas. Setup only points the user toward the
+          next un-talked-to persona. */}
+      {!gateOpen && (
         <p className="text-[11px] text-cosmos-muted/55 pt-1 leading-relaxed">
-          Talked with {completedCount} of {MIN_PERSONAS}. The tree opens after at least {MIN_PERSONAS} personas push your thinking.
+          Talked with {completedCount} of {MIN_PERSONAS}.
           {nextPersona ? (
             <>
               {" "}Try{" "}
@@ -532,6 +548,8 @@ function TypingDots() {
 export default function SetupPanel({ onReady, onSummonPersona, examples }: Props) {
   const [input, setInput] = useState("");
   const [isRecording, setIsRecording] = useState(false);
+  const [autoPlay, setAutoPlay] = useState(false);
+  const [speakingIdx, setSpeakingIdx] = useState<number | null>(null);
   const {
     briefMessages,
     addBriefMessage,
@@ -546,6 +564,41 @@ export default function SetupPanel({ onReady, onSummonPersona, examples }: Props
     recommendedPersonas,
     castConversations,
   } = useStore();
+  const tts = useTextToSpeech();
+  const setupVoiceProfile = getVoiceProfile("setup");
+  const lastAutoPlayedIdxRef = useRef(-1);
+
+  const speakSetupMessage = (idx: number, text: string) => {
+    if (!tts.supported || !text) return;
+    if (speakingIdx === idx && tts.speaking) {
+      tts.stop();
+      setSpeakingIdx(null);
+      return;
+    }
+    setSpeakingIdx(idx);
+    tts.speak(text, "setup", setupVoiceProfile);
+  };
+
+  // Auto-play the latest Setup message when autoPlay is enabled.
+  useEffect(() => {
+    if (!autoPlay || !tts.supported || tts.speaking) return;
+    let latest = -1;
+    for (let i = briefMessages.length - 1; i >= 0; i--) {
+      if (briefMessages[i].role === "setup") { latest = i; break; }
+    }
+    if (latest > lastAutoPlayedIdxRef.current && briefMessages[latest]?.content) {
+      lastAutoPlayedIdxRef.current = latest;
+      speakSetupMessage(latest, briefMessages[latest].content);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [briefMessages.length, autoPlay, tts.supported]);
+
+  useEffect(() => {
+    if (!tts.speaking && speakingIdx !== null) {
+      const t = setTimeout(() => setSpeakingIdx(null), 50);
+      return () => clearTimeout(t);
+    }
+  }, [tts.speaking, speakingIdx]);
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
@@ -554,7 +607,11 @@ export default function SetupPanel({ onReady, onSummonPersona, examples }: Props
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [briefMessages, briefLoading]);
 
-  // Voice input — toggles speech recognition, transcribes into the input field
+  // Voice input. Snapshots input at recording start so interim transcripts
+  // don't pile on top of each other and produce stuttering output.
+  const inputAtStartRef = useRef("");
+  const isRecRef = useRef(isRecording);
+  useEffect(() => { isRecRef.current = isRecording; }, [isRecording]);
   const toggleRecording = useCallback(() => {
     if (isRecording) {
       recognitionRef.current?.stop();
@@ -564,46 +621,108 @@ export default function SetupPanel({ onReady, onSummonPersona, examples }: Props
 
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) {
-      alert("Voice input isn't supported in this browser. Try Chrome or Edge.");
+      alert("Voice input isn't supported in this browser. Try Chrome, Edge, or Safari.");
       return;
+    }
+
+    // Aggressive teardown of any prior recognition (Safari's start() can
+    // silently fail when the previous instance is still shutting down).
+    if (recognitionRef.current) {
+      try { recognitionRef.current.abort(); } catch {}
+      try { recognitionRef.current.stop(); } catch {}
+      recognitionRef.current.onresult = null;
+      recognitionRef.current.onend = null;
+      recognitionRef.current.onerror = null;
+      recognitionRef.current = null;
     }
 
     const recognition = new SR();
     recognition.continuous = true;
     recognition.interimResults = true;
-    recognition.lang = getLanguageConfig(language).speechLang;
+    recognition.lang = "en-US";
 
-    let finalTranscript = "";
+    inputAtStartRef.current = input;
+    let lastSpoken = "";
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
-      let interim = "";
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const transcript = event.results[i][0].transcript;
-        if (event.results[i].isFinal) {
-          finalTranscript += transcript + " ";
-        } else {
-          interim = transcript;
-        }
+      let all = "";
+      for (let i = 0; i < event.results.length; i++) {
+        all += event.results[i][0].transcript + " ";
       }
-      setInput((prev) => {
-        // Build current input from prior committed text + new spoken text
-        const base = prev.replace(/​.*$/, "").trimEnd();
-        const spoken = (finalTranscript + interim).trim();
-        if (!spoken) return base;
-        return base ? `${base} ${spoken}` : spoken;
-      });
+      const spoken = all.trim();
+      if (!spoken) return;
+      lastSpoken = spoken;
+      const prefix = inputAtStartRef.current;
+      const sep = prefix && spoken ? " " : "";
+      setInput(prefix + sep + spoken);
+      if (inputRef.current) {
+        const el = inputRef.current;
+        el.style.height = "auto";
+        el.style.height = Math.min(el.scrollHeight, 180) + "px";
+      }
     };
 
     recognition.onerror = () => setIsRecording(false);
     recognition.onend = () => {
       setIsRecording(false);
-      setInput((prev) => prev.replace(/​.*$/, "").trimEnd());
+      if (lastSpoken) {
+        const prefix = inputAtStartRef.current;
+        const sep = prefix && lastSpoken ? " " : "";
+        setInput(prefix + sep + lastSpoken);
+      }
     };
 
     recognitionRef.current = recognition;
-    recognition.start();
-    setIsRecording(true);
-  }, [isRecording, language]);
+    try {
+      recognition.start();
+      setIsRecording(true);
+    } catch (err) {
+      console.warn("Speech recognition start failed; retrying in 100ms", err);
+      setTimeout(() => {
+        try {
+          recognition.start();
+          setIsRecording(true);
+        } catch (e) {
+          console.error("Speech recognition retry also failed", e);
+          setIsRecording(false);
+        }
+      }, 100);
+    }
+  }, [isRecording, language, input]);
+
+  // Push-to-talk: hold Space anywhere in the Setup overlay (when not focused
+  // in a textarea/input) to record. Released = stop. Same affordance as
+  // CastPersonaPanel and PanelView.
+  const toggleRef = useRef(toggleRecording);
+  useEffect(() => { toggleRef.current = toggleRecording; }, [toggleRecording]);
+  useEffect(() => {
+    const pttActive = { current: false };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.code !== "Space" || e.repeat) return;
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || (t as HTMLElement).isContentEditable)) return;
+      e.preventDefault();
+      if (!isRecRef.current) {
+        pttActive.current = true;
+        toggleRef.current();
+      }
+    };
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (e.code !== "Space") return;
+      if (pttActive.current && isRecRef.current) {
+        pttActive.current = false;
+        toggleRef.current();
+      } else {
+        pttActive.current = false;
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    document.addEventListener("keyup", onKeyUp);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("keyup", onKeyUp);
+    };
+  }, []);
 
   const send = async (overrideText?: string) => {
     const text = (overrideText ?? input).trim();
@@ -631,7 +750,7 @@ export default function SetupPanel({ onReady, onSummonPersona, examples }: Props
       if (data.error) {
         addBriefMessage({
           role: "setup",
-          content: "Something went wrong. Try again, or click 'Skip ahead' to open the tree.",
+          content: "Something went wrong. Try again.",
         });
         return;
       }
@@ -671,6 +790,7 @@ export default function SetupPanel({ onReady, onSummonPersona, examples }: Props
                 expertise?: string;
                 pushFor?: string;
                 vocabulary?: string[];
+                accessory?: string;
               }) => ({
                 id: p.id,
                 name: p.name,
@@ -681,6 +801,7 @@ export default function SetupPanel({ onReady, onSummonPersona, examples }: Props
                 vocabulary: Array.isArray(p.vocabulary)
                   ? p.vocabulary.filter((v) => typeof v === "string").slice(0, 12)
                   : undefined,
+                accessory: typeof p.accessory === "string" ? p.accessory : undefined,
               }),
             );
           setRecommendedPersonas(valid);
@@ -693,7 +814,7 @@ export default function SetupPanel({ onReady, onSummonPersona, examples }: Props
       console.error("Setup failed:", err);
       addBriefMessage({
         role: "setup",
-        content: "Connection issue. Try again or click 'Skip ahead' to open the tree.",
+        content: "Connection issue. Try again in a moment.",
       });
     } finally {
       setBriefLoading(false);
@@ -750,6 +871,7 @@ export default function SetupPanel({ onReady, onSummonPersona, examples }: Props
         vocabulary: Array.isArray(data.vocabulary)
           ? data.vocabulary.filter((v: unknown) => typeof v === "string").slice(0, 12)
           : undefined,
+        accessory: typeof data.accessory === "string" ? data.accessory : undefined,
       };
       setRecommendedPersonas([...recommendedPersonas, newPersona]);
     } catch (err) {
@@ -759,15 +881,6 @@ export default function SetupPanel({ onReady, onSummonPersona, examples }: Props
         content: "Connection issue while building that expert. Try again in a moment.",
       });
     }
-  };
-
-  const handleSkipAhead = () => {
-    const userText = briefMessages
-      .filter((m) => m.role === "user")
-      .map((m) => m.content)
-      .join("\n\n");
-    if (!userText.trim()) return;
-    onReady(userText, [], []);
   };
 
   // Latest setup message index
@@ -844,20 +957,20 @@ export default function SetupPanel({ onReady, onSummonPersona, examples }: Props
           </div>
         </div>
 
-        {/* Suggested openers */}
-        <div className="mt-4">
-          <div className="text-[10px] text-cosmos-muted/40 uppercase tracking-wider mb-2">
+        {/* Suggested openers, rendered as full-width starter cards because
+            the demo questions are long-form and don't fit a chip layout. */}
+        <div className="mt-5">
+          <div className="text-[10px] text-cosmos-muted/40 uppercase tracking-wider mb-2.5">
             Or start from
           </div>
-          <div className="flex flex-wrap gap-2">
-            {examples.map(({ text, icon: Icon }) => (
+          <div className="flex flex-col gap-2">
+            {examples.map(({ text }) => (
               <button
                 key={text}
                 onClick={() => send(text)}
                 disabled={briefLoading}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] text-cosmos-muted border border-cosmos-border/50 rounded-lg hover:border-cosmos-glow/30 hover:text-cosmos-glow hover:bg-cosmos-glow/5 transition-all disabled:opacity-30"
+                className="text-left px-4 py-3 text-[12.5px] text-cosmos-text/85 leading-relaxed border border-cosmos-border/60 rounded-xl hover:border-cosmos-glow/45 hover:text-cosmos-text hover:bg-cosmos-glow/8 transition-all disabled:opacity-30 break-words"
               >
-                <Icon className="w-3 h-3" />
                 {text}
               </button>
             ))}
@@ -876,21 +989,38 @@ export default function SetupPanel({ onReady, onSummonPersona, examples }: Props
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={{ duration: 0.4 }}
-        className="fixed inset-0 z-40 bg-cosmos-bg/95 backdrop-blur-md"
+        className="fixed inset-0 z-40 bg-cosmos-bg backdrop-blur-md"
       >
-        {/* Close — top right */}
-        <button
-          onClick={() => {
-            if (briefMessages.length > 0) {
-              if (!confirm("Close Setup and return home? Your conversation will be discarded.")) return;
-            }
-            resetBrief();
-          }}
-          className="absolute top-4 right-4 z-50 p-2 text-cosmos-muted/50 hover:text-cosmos-text transition-colors rounded-lg"
-          title="Close Setup"
-        >
-          <X className="w-5 h-5" />
-        </button>
+        {/* Voice + close cluster, top right. The voice toggle controls
+            whether Setup auto-reads its messages aloud. Per-message volume
+            buttons on each Setup bubble give manual control regardless. */}
+        <div className="absolute top-4 right-4 z-50 flex items-center gap-1">
+          {tts.supported && (
+            <button
+              onClick={() => setAutoPlay((v) => !v)}
+              className={`p-2 rounded-lg transition-colors ${
+                autoPlay
+                  ? "bg-cosmos-glow/15 text-cosmos-glow"
+                  : "text-cosmos-muted/50 hover:text-cosmos-text"
+              }`}
+              title={autoPlay ? "Setup voice on. Click to silence." : "Setup voice off. Click to enable."}
+            >
+              {autoPlay ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+            </button>
+          )}
+          <button
+            onClick={() => {
+              if (briefMessages.length > 0) {
+                if (!confirm("Close Setup and return home? Your conversation will be discarded.")) return;
+              }
+              resetBrief();
+            }}
+            className="p-2 text-cosmos-muted/50 hover:text-cosmos-text transition-colors rounded-lg"
+            title="Close Setup"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
 
         <div className="flex flex-col md:flex-row h-full">
           {/* Persona navigation strip — top center */}
@@ -913,6 +1043,9 @@ export default function SetupPanel({ onReady, onSummonPersona, examples }: Props
                       isLatest={i === latestSetupIdx}
                       onChipClick={(text) => send(text)}
                       disabled={briefLoading}
+                      ttsSupported={tts.supported}
+                      isSpeaking={speakingIdx === i && tts.speaking}
+                      onSpeak={() => speakSetupMessage(i, m.content)}
                     />
                     {briefReady && i === latestSetupIdx && (
                       <ReadyActions
@@ -967,17 +1100,15 @@ export default function SetupPanel({ onReady, onSummonPersona, examples }: Props
                     </button>
                   </div>
                 </div>
-                {!briefReady && (
-                  <div className="mt-2 text-center">
-                    <button
-                      onClick={handleSkipAhead}
-                      disabled={briefLoading}
-                      className="text-[11px] text-cosmos-muted/40 hover:text-cosmos-muted transition-colors disabled:opacity-30"
-                    >
-                      Skip ahead and just open the tree
-                    </button>
-                  </div>
-                )}
+                <div className="mt-2 text-center">
+                  <span className="text-[10px] text-cosmos-muted/40">
+                    {isRecording ? (
+                      <span className="text-cosmos-conflict">Listening...</span>
+                    ) : (
+                      <>Hold <kbd className="px-1 py-0.5 rounded border border-cosmos-border/50 text-cosmos-muted/55 font-mono text-[9px]">Space</kbd> to talk</>
+                    )}
+                  </span>
+                </div>
               </div>
             </div>
           </div>

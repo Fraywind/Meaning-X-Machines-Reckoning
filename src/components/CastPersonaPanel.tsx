@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, Send, Loader2, X, Mic, MicOff, Volume2, VolumeX } from "lucide-react";
+import { ArrowRight, Send, Loader2, X, Mic, MicOff, Volume2, VolumeX, Users } from "lucide-react";
 import { useStore, BriefMessage, PersonaConcern } from "@/store/useStore";
 import { safeFetch } from "@/lib/api";
 import { getLanguageConfig } from "@/lib/i18n";
@@ -61,9 +61,17 @@ function Bubble({
     if (!isLatest || !isPersona) return;
     setShowChips(false);
     setOfferHelp(false);
-    const t = setTimeout(() => setOfferHelp(true), 8000);
+    // Suggest-responses link only appears after a full minute of inactivity.
+    // The default behavior is the user types or talks; chips are a fallback
+    // for genuine stuckness, not a quick shortcut.
+    const t = setTimeout(() => setOfferHelp(true), 60000);
     return () => clearTimeout(t);
   }, [isLatest, isPersona, message.content]);
+
+  // When a persona's turn surfaces a judgment moment, the bubble renders
+  // in the cosmos-judgment palette (yellow) and carries a JUDGMENT label so
+  // the user is told plainly: this is the part where YOU need to choose.
+  const isJudgment = isPersona && !!message.judgmentMoment;
 
   return (
     <motion.div
@@ -76,11 +84,51 @@ function Bubble({
         <div
           className={`max-w-[85%] px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed ${
             isPersona
-              ? `${colors.bubbleBg} border ${colors.bubbleBorder} text-cosmos-text rounded-tl-sm`
+              ? isJudgment
+                ? "bg-cosmos-judgment/12 border-2 border-cosmos-judgment/45 text-cosmos-text rounded-tl-sm shadow-[0_0_18px_rgb(var(--judgment)/0.18)]"
+                : `${colors.bubbleBg} border ${colors.bubbleBorder} text-cosmos-text rounded-tl-sm`
               : "bg-cosmos-surface/80 border border-cosmos-border text-cosmos-text/90 rounded-tr-sm"
           }`}
         >
+          {isJudgment && (
+            <div className="text-[9px] uppercase tracking-[0.18em] font-semibold text-cosmos-judgment mb-1.5 flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-cosmos-judgment animate-pulse" />
+              Judgment moment
+            </div>
+          )}
           {message.content}
+          {isJudgment && message.judgmentMoment && (
+            <div className="mt-3 pt-3 border-t border-cosmos-judgment/25 space-y-2">
+              {message.judgmentMoment.stakes && (
+                <div className="text-[11px] text-cosmos-text/75 leading-relaxed">
+                  <span className="text-cosmos-judgment/85 font-medium">What's at stake:</span>{" "}
+                  {message.judgmentMoment.stakes}
+                </div>
+              )}
+              {message.judgmentMoment.conflict && (
+                <div className="text-[11px] text-cosmos-text/75 leading-relaxed">
+                  <span className="text-cosmos-judgment/85 font-medium">The tradeoff:</span>{" "}
+                  {message.judgmentMoment.conflict}
+                </div>
+              )}
+              <div className="space-y-1 pt-1">
+                {message.judgmentMoment.options.map((opt, oi) => (
+                  <div
+                    key={oi}
+                    className="text-[11px] px-2 py-1.5 rounded-md bg-cosmos-bg/40 border border-cosmos-judgment/20"
+                  >
+                    <div className="font-medium text-cosmos-text/90">{opt.label}</div>
+                    {opt.description && (
+                      <div className="text-cosmos-text/65 mt-0.5">{opt.description}</div>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <div className="text-[10px] text-cosmos-judgment/65 italic pt-1">
+                Added to your tree as a judgment node. You choose when ready.
+              </div>
+            </div>
+          )}
         </div>
         {isPersona && ttsSupported && onSpeak && (
           <button
@@ -161,6 +209,9 @@ export default function CastPersonaPanel({ persona, onComplete, onClose }: Props
     setCurrentCastPersona,
     setPendingCrossCheck,
     crossCheckHistory,
+    enterPanelMode,
+    addNodes,
+    setNarrativeOpen,
     language,
   } = useStore();
 
@@ -186,20 +237,17 @@ export default function CastPersonaPanel({ persona, onComplete, onClose }: Props
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const openedRef = useRef(false);
 
-  // Mark visited on mount; auto-fire opening turn if no messages yet
+  // Mark visited on mount; auto-fire LLM opening turn if no messages yet.
+  // The LLM produces a contextual opener that reflects the persona's dossier
+  // AND what Setup just surfaced. While loading, typing dots show. If the
+  // LLM returns nothing or errors, we fall back to the templated opener
+  // (handled inside sendTurn's reply handling).
   useEffect(() => {
     if (openedRef.current) return;
     openedRef.current = true;
     markCastVisited(persona.id);
     if (messages.length === 0) {
-      // Seed the conversation with the templated opener so the right side is
-      // never blank when the panel opens. The LLM kicks in only on the user's
-      // first reply, removing a network round-trip from the entry experience.
-      addCastMessage(persona.id, {
-        role: "setup",
-        content: persona.openingMessage,
-        options: persona.openingOptions || [],
-      });
+      sendTurn("");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -208,6 +256,12 @@ export default function CastPersonaPanel({ persona, onComplete, onClose }: Props
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages.length, loading]);
 
+  // Capture the user's existing typed input at recording start. We append
+  // speech to this fixed prefix rather than to whatever input currently
+  // shows, otherwise interim transcripts pile on top of each other and
+  // produce stuttering output ("I I think I I think I want...").
+  const inputAtStartRef = useRef("");
+
   const startRecording = useCallback(() => {
     if (isRecording) return;
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -215,38 +269,81 @@ export default function CastPersonaPanel({ persona, onComplete, onClose }: Props
       alert("Voice input isn't supported in this browser. Try Chrome, Edge, or Safari.");
       return;
     }
+    // Aggressively tear down any previous recognition. Safari has been seen
+    // to silently fail recognition.start() if a prior instance is still in
+    // its shutdown phase.
+    if (recognitionRef.current) {
+      try { recognitionRef.current.abort(); } catch {}
+      try { recognitionRef.current.stop(); } catch {}
+      recognitionRef.current.onresult = null;
+      recognitionRef.current.onend = null;
+      recognitionRef.current.onerror = null;
+      recognitionRef.current = null;
+    }
+
     const recognition = new SR();
     recognition.continuous = true;
     recognition.interimResults = true;
-    recognition.lang = getLanguageConfig(language).speechLang;
+    recognition.lang = "en-US";
 
-    let finalTranscript = "";
+    // Snapshot input at the moment recording begins, used as the prefix.
+    inputAtStartRef.current = input;
+    let lastSpoken = "";
 
+    // Iterate ALL results from the start (Safari quirk with resultIndex).
     recognition.onresult = (event: SpeechRecognitionEvent) => {
-      let interim = "";
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const t = event.results[i][0].transcript;
-        if (event.results[i].isFinal) finalTranscript += t + " ";
-        else interim = t;
+      let all = "";
+      for (let i = 0; i < event.results.length; i++) {
+        all += event.results[i][0].transcript + " ";
       }
-      setInput((prev) => {
-        const base = prev.replace(/​.*$/, "").trimEnd();
-        const spoken = (finalTranscript + interim).trim();
-        if (!spoken) return base;
-        return base ? `${base} ${spoken}` : spoken;
-      });
+      const spoken = all.trim();
+      if (!spoken) return; // ignore empty events (Safari fires these on stop)
+      lastSpoken = spoken;
+      const prefix = inputAtStartRef.current;
+      const sep = prefix && spoken ? " " : "";
+      setInput(prefix + sep + spoken);
+      // Force textarea to resize so new content is visible after voice input.
+      if (inputRef.current) {
+        const el = inputRef.current;
+        el.style.height = "auto";
+        el.style.height = Math.min(el.scrollHeight, 180) + "px";
+      }
     };
 
     recognition.onerror = () => setIsRecording(false);
     recognition.onend = () => {
       setIsRecording(false);
-      setInput((prev) => prev.replace(/​.*$/, "").trimEnd());
+      if (lastSpoken) {
+        const prefix = inputAtStartRef.current;
+        const sep = prefix && lastSpoken ? " " : "";
+        setInput(prefix + sep + lastSpoken);
+        if (inputRef.current) {
+          const el = inputRef.current;
+          el.style.height = "auto";
+          el.style.height = Math.min(el.scrollHeight, 180) + "px";
+        }
+      }
     };
 
     recognitionRef.current = recognition;
-    recognition.start();
-    setIsRecording(true);
-  }, [isRecording, language]);
+    try {
+      recognition.start();
+      setIsRecording(true);
+    } catch (err) {
+      // Most common failure: Safari's recognition still cleaning up from
+      // the previous session. Brief retry covers it.
+      console.warn("Speech recognition start failed; retrying in 100ms", err);
+      setTimeout(() => {
+        try {
+          recognition.start();
+          setIsRecording(true);
+        } catch (e) {
+          console.error("Speech recognition retry also failed", e);
+          setIsRecording(false);
+        }
+      }, 100);
+    }
+  }, [isRecording, language, input]);
 
   const stopRecording = useCallback(() => {
     if (!isRecording) return;
@@ -331,6 +428,19 @@ export default function CastPersonaPanel({ persona, onComplete, onClose }: Props
     // so the runtime prompt is primed with their expertise/pushFor/vocabulary.
     const selfRec = recommendedPersonas.find((p) => p.id === persona.id);
 
+    // For Anchor, forward summaries of personas that have already reached
+    // ready=true so it can synthesize them by name.
+    const priorPersonaSummaries =
+      persona.archetype === "anchor"
+        ? recommendedPersonas
+            .filter((p) => p.id !== persona.id && castConversations[p.id]?.ready)
+            .map((p) => ({
+              name: p.name,
+              summary: castConversations[p.id]?.summary || "",
+            }))
+            .filter((p) => p.summary.trim())
+        : [];
+
     try {
       const data = await safeFetch("/api/persona", {
         personaId: persona.id,
@@ -349,6 +459,7 @@ export default function CastPersonaPanel({ persona, onComplete, onClose }: Props
         expertise: selfRec?.expertise,
         pushFor: selfRec?.pushFor,
         vocabulary: selfRec?.vocabulary,
+        priorPersonaSummaries,
       });
 
       if (data.error) {
@@ -359,11 +470,78 @@ export default function CastPersonaPanel({ persona, onComplete, onClose }: Props
         return;
       }
 
+      // Validate the optional judgmentMoment field. Persona is only allowed
+      // to flag this when the turn surfaces a real value-laden fork. If the
+      // shape is valid, attach to the message AND immediately add a
+      // DecisionNode of type "judgment" to the tree state so the tree builds
+      // up live as the conversation progresses (per Brian Cantwell Smith,
+      // judgment nodes are the only place the user's choice is required).
+      let judgmentForMessage: BriefMessage["judgmentMoment"] | undefined;
+      if (
+        data.judgmentMoment &&
+        typeof data.judgmentMoment.question === "string" &&
+        Array.isArray(data.judgmentMoment.options) &&
+        data.judgmentMoment.options.length >= 2
+      ) {
+        const jm = data.judgmentMoment as {
+          question: string;
+          stakes?: string;
+          conflict?: string;
+          options: { label?: string; description?: string; tradeoffs?: string[]; consequences?: string[] }[];
+        };
+        const cleanOptions = jm.options
+          .filter((o) => o && typeof o.label === "string" && o.label.trim())
+          .slice(0, 4)
+          .map((o, idx) => ({
+            id: `opt-${idx}`,
+            label: o.label!,
+            description: typeof o.description === "string" ? o.description : "",
+            tradeoffs: Array.isArray(o.tradeoffs) ? o.tradeoffs.filter((t) => typeof t === "string") : [],
+            consequences: Array.isArray(o.consequences)
+              ? o.consequences.filter((c) => typeof c === "string")
+              : [],
+          }));
+        if (cleanOptions.length >= 2) {
+          const nodeId = `j-${persona.id}-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+          judgmentForMessage = {
+            nodeId,
+            question: jm.question,
+            stakes: typeof jm.stakes === "string" ? jm.stakes : "",
+            conflict: typeof jm.conflict === "string" ? jm.conflict : "",
+            options: cleanOptions,
+          };
+          // Add to the tree state. Live, incremental tree-building.
+          addNodes([
+            {
+              id: nodeId,
+              type: "judgment",
+              label: jm.question,
+              description: typeof jm.conflict === "string" ? jm.conflict : "",
+              parentId: null,
+              children: [],
+              options: cleanOptions,
+              conflict: typeof jm.conflict === "string" ? jm.conflict : "",
+              stakes: typeof jm.stakes === "string" ? jm.stakes : "",
+              status: "pending",
+            },
+          ]);
+        }
+      }
+
       if (data.reply) {
         addCastMessage(persona.id, {
           role: "setup",
           content: data.reply,
           options: Array.isArray(data.options) ? data.options : [],
+          judgmentMoment: judgmentForMessage,
+        });
+      } else if (isOpening) {
+        // LLM didn't produce an opening reply. Fall back to the templated
+        // opener so the right side is never left blank.
+        addCastMessage(persona.id, {
+          role: "setup",
+          content: persona.openingMessage,
+          options: persona.openingOptions || [],
         });
       }
       // Cross-check: another recommended persona has a pertinent take.
@@ -507,6 +685,26 @@ export default function CastPersonaPanel({ persona, onComplete, onClose }: Props
         className="fixed inset-0 z-[60] bg-cosmos-bg/95 backdrop-blur-md"
       >
         <div className="absolute top-4 right-4 z-50 flex items-center gap-1">
+          {gateOpen && (
+            <button
+              onClick={() => {
+                // Pick the first two ready cast personas, putting the active
+                // persona first if they're ready, otherwise default to the
+                // first two ready conversations in recommended order.
+                const readyIds = recommendedPersonas
+                  .filter((p) => castConversations[p.id]?.ready)
+                  .map((p) => p.id);
+                if (readyIds.length < 2) return;
+                const a = readyIds.includes(persona.id) ? persona.id : readyIds[0];
+                const b = readyIds.find((id) => id !== a) || readyIds[1];
+                enterPanelMode([a, b]);
+              }}
+              className={`p-2 rounded-lg transition-colors text-cosmos-muted/50 hover:text-cosmos-text hover:${colors.bubbleBg}`}
+              title="Open Panel mode (two personas, you moderate)"
+            >
+              <Users className="w-4 h-4" />
+            </button>
+          )}
           {tts.supported && (
             <button
               onClick={() => setAutoPlay((v) => !v)}
@@ -683,13 +881,22 @@ export default function CastPersonaPanel({ persona, onComplete, onClose }: Props
                         )}
                         {gateOpen ? (
                           <>
-                            <button
-                              onClick={() => onComplete(summary || "")}
-                              className="inline-flex items-center gap-2 px-4 py-2 bg-cosmos-resolved/15 border border-cosmos-resolved/40 rounded-lg text-cosmos-resolved text-sm font-medium hover:bg-cosmos-resolved/25 transition-all"
-                            >
-                              Open the tree
-                              <ArrowRight className="w-3.5 h-3.5" />
-                            </button>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <button
+                                onClick={() => onComplete(summary || "")}
+                                className="inline-flex items-center gap-2 px-4 py-2 bg-cosmos-resolved/15 border border-cosmos-resolved/40 rounded-lg text-cosmos-resolved text-sm font-medium hover:bg-cosmos-resolved/25 transition-all"
+                              >
+                                Open the tree
+                                <ArrowRight className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => setNarrativeOpen(true)}
+                                className="inline-flex items-center gap-2 px-4 py-2 bg-cosmos-glow/10 border border-cosmos-glow/30 rounded-lg text-cosmos-glow text-sm font-medium hover:bg-cosmos-glow/20 transition-all"
+                                title="Read a second-person story of what happened in your session"
+                              >
+                                Tell me the story
+                              </button>
+                            </div>
                             <p className="text-[10px] text-cosmos-muted/40 pt-1">
                               {completedCount < RECOMMENDED_PERSONAS
                                 ? `Talked with ${completedCount} of ${recommendedPersonas.length}. One more is recommended for a sharper tree.`

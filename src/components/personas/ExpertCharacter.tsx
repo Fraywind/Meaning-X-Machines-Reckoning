@@ -1,12 +1,14 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { Accessory } from "./accessories";
 
 /**
  * Expert — generic domain-specific persona character. Used as a fallback for
- * AI-generated personas (zookeeper, lawyer, teacher, etc.). The accent color is
- * derived from the persona name so each domain expert looks slightly distinct
- * without requiring hand-crafted SVG per role.
+ * AI-generated personas (zookeeper, lawyer, teacher, etc.). The accent color
+ * is derived from the persona name so each domain expert looks slightly
+ * distinct, and an optional accessory (chef-hat, glasses, stethoscope, etc.)
+ * adds a role-specific visual cue based on Setup's dossier.
  */
 function hashColor(seed: string): { primary: string; primaryShade: string; collar: string } {
   // Tiny deterministic hash → hue rotation
@@ -24,9 +26,11 @@ interface Props {
   thinking: boolean;
   /** Accent color seed — typically the persona name, so each expert reads as distinct */
   accentSeed?: string;
+  /** Optional accessory key (e.g. "chef-hat", "glasses", "stethoscope") */
+  accessory?: string;
 }
 
-export default function ExpertCharacter({ thinking, accentSeed = "expert" }: Props) {
+export default function ExpertCharacter({ thinking, accentSeed = "expert", accessory }: Props) {
   const { primary, primaryShade, collar } = hashColor(accentSeed);
   const skin = "#f3d3b0";
   const skinShade = "#cfa789";
@@ -150,6 +154,10 @@ export default function ExpertCharacter({ thinking, accentSeed = "expert" }: Pro
           }}
           transition={{ duration: thinking ? 1.5 : 0.5, repeat: thinking ? Infinity : 0, ease: "easeInOut" }}
         />
+
+        {/* Role-specific accessory layered on top of the portrait so it
+            telegraphs the persona's domain at a glance. */}
+        <Accessory kind={accessory} />
       </motion.svg>
     </>
   );
