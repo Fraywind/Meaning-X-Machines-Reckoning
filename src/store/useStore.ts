@@ -267,7 +267,7 @@ export const useStore = create<AppState>((set, get) => ({
   critique: null,
   savedSessions: [],
   currentSessionId: null,
-  theme: "starfield" as ThemeId,
+  theme: "nature" as ThemeId,
   language: "en" as AppLanguage,
   viewMode: "tree" as ViewMode,
   chatMessages: [],

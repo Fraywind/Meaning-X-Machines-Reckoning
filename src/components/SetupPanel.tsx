@@ -476,7 +476,7 @@ function ReadyActions({
             </span>
           </div>
           <p className="text-[11px] text-cosmos-muted/60 leading-relaxed">
-            Talk to one before opening the tree. Each will push your thinking from a different angle. You can come back to Setup anytime (tap it in the strip up top) if a new question opens up or you want to add another expert.
+            Start with one of these. Each will push your thinking from a different angle. You can come back to Setup anytime (tap it in the strip up top) if a new question opens up or you want to add another expert.
           </p>
           <div className="space-y-1.5">
             {recommendedPersonas.map((p, idx) => {
