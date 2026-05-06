@@ -1,7 +1,8 @@
 "use client";
 
+import { useEffect } from "react";
 import { motion } from "framer-motion";
-import { GitBranch, BookOpen, MessageSquare } from "lucide-react";
+import { GitBranch, BookText } from "lucide-react";
 import { ViewMode } from "@/types";
 import { useStore } from "@/store/useStore";
 
@@ -9,25 +10,27 @@ const modes: { id: ViewMode; label: string; desc: string; icon: typeof GitBranch
   {
     id: "tree",
     label: "Tree",
-    desc: "Visual map you can explore",
+    desc: "Structured decision tree of your deliberation",
     icon: GitBranch,
   },
   {
-    id: "notebook",
-    label: "Notebook",
-    desc: "Linear, focused planning",
-    icon: BookOpen,
-  },
-  {
-    id: "chat",
-    label: "Dialogue",
-    desc: "Chat with tree alongside",
-    icon: MessageSquare,
+    id: "journey",
+    label: "Journey",
+    desc: "Second-person story of what happened",
+    icon: BookText,
   },
 ];
 
 export default function ModePicker() {
   const { viewMode, setViewMode } = useStore();
+
+  // If a stale viewMode (notebook / chat) is persisted from before, snap
+  // to "tree" so the home picker shows a valid selection.
+  useEffect(() => {
+    if (viewMode !== "tree" && viewMode !== "journey") {
+      setViewMode("tree");
+    }
+  }, [viewMode, setViewMode]);
 
   return (
     <motion.div

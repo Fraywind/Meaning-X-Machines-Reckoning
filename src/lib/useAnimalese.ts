@@ -48,11 +48,13 @@ export function getAnimaleseProfile(archetype: string): AnimaleseProfile {
   return PERSONA_ANIMALESE[archetype] || PERSONA_ANIMALESE.expert;
 }
 
-/** Estimate how long the persona "talks". Roughly 50ms per character,
- *  capped at 12 seconds so a long message doesn't drone forever. */
+/** Estimate how long the persona "talks". Tuned shorter than literal
+ *  reading speed so the warble doesn't outlast the user's read. ~32ms
+ *  per character, capped at 7 seconds. Floor of 600ms so very short
+ *  messages still get a clear chime. */
 function estimateDuration(text: string): number {
   const chars = text.length;
-  return Math.max(800, Math.min(chars * 50, 12000));
+  return Math.max(600, Math.min(chars * 32, 7000));
 }
 
 export function useAnimalese() {

@@ -6,6 +6,7 @@ import GoalInput from "@/components/GoalInput";
 import DecisionTreeView from "@/components/DecisionTreeView";
 import NotebookView from "@/components/NotebookView";
 import ChatView from "@/components/ChatView";
+import NarrativeView from "@/components/NarrativeView";
 import { applyTheme, getTheme } from "@/lib/themes";
 
 export default function Home() {
@@ -26,7 +27,12 @@ export default function Home() {
         useStore.getState().setTheme(stored);
       }
       const storedMode = localStorage.getItem("reckoning-view-mode");
-      if (storedMode === "tree" || storedMode === "notebook" || storedMode === "chat") {
+      if (
+        storedMode === "tree" ||
+        storedMode === "journey" ||
+        storedMode === "notebook" ||
+        storedMode === "chat"
+      ) {
         useStore.getState().setViewMode(storedMode);
       }
     } catch {}
@@ -35,6 +41,12 @@ export default function Home() {
   const renderView = () => {
     if (!hasStarted) return <GoalInput />;
     switch (viewMode) {
+      case "journey":
+        // Journey mode renders the second-person narrative as the primary
+        // post-deliberation surface. NarrativeView's onClose returns to
+        // the tree view so the user always has a path back to the
+        // structured artifact.
+        return <NarrativeView onClose={() => useStore.getState().setViewMode("tree")} />;
       case "notebook":
         return <NotebookView />;
       case "chat":

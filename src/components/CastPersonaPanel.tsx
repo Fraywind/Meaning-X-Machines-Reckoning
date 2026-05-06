@@ -421,7 +421,11 @@ export default function CastPersonaPanel({ persona, onComplete, onClose }: Props
     setCastLoading(persona.id, true);
     if (inputRef.current) inputRef.current.style.height = "auto";
 
-    const crossCheckUsed = crossCheckHistory.some((entry) => entry.startsWith(`${persona.id}->`));
+    // Cap at 2 cross-checks per persona conversation. Loosened from 1 so
+    // the user gets a couple of "{Other} is ringing in" moments per turn,
+    // matching the medium-high threshold in the prompt.
+    const crossCheckUsed =
+      crossCheckHistory.filter((entry) => entry.startsWith(`${persona.id}->`)).length >= 2;
     const otherPersonas = recommendedPersonas
       .filter((p) => p.id !== persona.id)
       .map((p) => ({ id: p.id, name: p.name, role: p.role }));

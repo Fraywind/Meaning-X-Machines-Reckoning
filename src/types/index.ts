@@ -1,6 +1,10 @@
 export type NodeType = "goal" | "reckoning" | "judgment" | "resolved" | "counterfactual";
 
-export type ViewMode = "tree" | "notebook" | "chat";
+// "tree": structured decision tree (default)
+// "journey": second-person narrative summary of the deliberation
+// "notebook" | "chat" retained for legacy compatibility but no longer
+//   surfaced in the home-page mode picker.
+export type ViewMode = "tree" | "journey" | "notebook" | "chat";
 
 export type ExportFormat = "prompt" | "notebook";
 

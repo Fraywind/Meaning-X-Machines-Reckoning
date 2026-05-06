@@ -26,13 +26,13 @@ function buildCrossCheckSpec(
 Other recommended personas available to flag:
 ${list}
 
-Hard rules for crossCheck (the bar is HIGH; default is to omit):
-- The OTHER persona must contribute a CONCRETE question, observation, or correction that adds new substance to the conversation flow. Not a vibe, not "they would also be useful," not "they have an interesting perspective." A real intervention.
+Hard rules for crossCheck (medium-high bar; fire when it adds real substance, omit when borderline):
+- The OTHER persona must contribute a CONCRETE question, observation, or correction relevant to the user's current beat. Not a vibe, not "they would also be useful," not "they have an interesting perspective." A real intervention.
 - The user reading the oneLineTake should think "wait, that's a thing I haven't considered" or "yes, I want to hear that pushed." If they would shrug, omit.
-- Use it AT MOST ONCE in this entire conversation. Once fired, never fire again.
+- Aim for roughly 1-2 cross-checks per cast persona conversation when there's real material to surface. Use it AT MOST TWICE per persona conversation. Don't force it, but don't reflexively skip either; the user values these chime-ins when they land.
 - Never flag yourself. Never flag a persona not in the list above. Never flag a persona just because they're recommended; only when their specific expertise alters the current beat.
 - The take must be in THAT persona's voice and frame, with content, not a generic question. "Have you thought about X?" is not enough; "From a parent's seat, your second-week retention story is the whole game, not first-week downloads" is the bar.
-- Default to omitting. The cost of a weak cross-check is high (breaks the conversation flow with noise); the cost of skipping a borderline one is zero.
+- Skip ONLY when borderline. The cost of a weak cross-check is real (breaks the flow with noise), but skipping a clear-substance moment underdelivers. Default to firing when in doubt about a moderately-relevant take, omitting when the relevance is genuinely thin.
 - Do NOT include the crossCheck field in the JSON if you decide to skip it.
 `.trim();
 }

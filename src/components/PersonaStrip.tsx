@@ -252,23 +252,29 @@ export default function PersonaStrip({ activeId }: Props) {
             </button>
             {isCrossCheckTarget && (
               <motion.div
-                initial={{ opacity: 0, y: -6, scale: 0.96 }}
+                initial={{ opacity: 0, y: -10, scale: 0.92 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
-                transition={{ duration: 0.35, ease: "easeOut" }}
+                transition={{ duration: 0.45, ease: [0.34, 1.56, 0.64, 1] }}
                 className={`absolute left-0 top-full mt-2 w-[20rem] max-w-[22rem] rounded-xl bg-cosmos-surface backdrop-blur-md border-2 ${c.activeBorder} shadow-2xl z-50 overflow-hidden`}
               >
-                {/* Header bar with pulsing dot, persona name, and "ringing" status */}
-                <div className={`flex items-center gap-2 px-3.5 py-2 ${c.activeBg} border-b ${c.activeBorder}`}>
-                  <motion.svg
-                    viewBox="0 0 8 8"
-                    className={`w-2 h-2 ${c.activeText}`}
-                    animate={{ scale: [1, 1.4, 1], opacity: [0.7, 1, 0.7] }}
-                    transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
-                  >
-                    <circle cx="4" cy="4" r="3" fill="currentColor" />
-                  </motion.svg>
+                {/* Header bar: stronger ring-in indicator. Three pulsing
+                    dots cascading like an incoming-call animation. */}
+                <div className={`flex items-center gap-2 px-3.5 py-2.5 ${c.activeBg} border-b ${c.activeBorder}`}>
+                  <div className="flex items-center gap-1">
+                    {[0, 0.2, 0.4].map((delay) => (
+                      <motion.svg
+                        key={delay}
+                        viewBox="0 0 8 8"
+                        className={`w-1.5 h-1.5 ${c.activeText}`}
+                        animate={{ scale: [1, 1.6, 1], opacity: [0.5, 1, 0.5] }}
+                        transition={{ duration: 0.9, repeat: Infinity, ease: "easeInOut", delay }}
+                      >
+                        <circle cx="4" cy="4" r="3" fill="currentColor" />
+                      </motion.svg>
+                    ))}
+                  </div>
                   <span className={`text-[10px] uppercase tracking-[0.2em] ${c.activeText} font-bold`}>
-                    {p.name} is ringing in
+                    {p.name} is calling
                   </span>
                 </div>
                 {/* The take itself, prominent and readable */}
@@ -277,19 +283,32 @@ export default function PersonaStrip({ activeId }: Props) {
                     {pendingCrossCheck!.oneLineTake}
                   </p>
                 </div>
-                {/* CTA: stop propagation so click goes here, not to the
-                    underlying button. handleClick still fires below to
-                    switch personas and clear the pending state. */}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleClick(p.id);
-                  }}
-                  className={`w-full px-4 py-2.5 ${c.activeBg} ${c.activeText} text-[12px] font-semibold border-t ${c.activeBorder} hover:brightness-110 active:brightness-95 transition-all flex items-center justify-center gap-2`}
-                >
-                  Take the call from {p.name}
-                  <span className="text-[10px]">→</span>
-                </button>
+                {/* Two CTAs: take the call (switches personas) or dismiss
+                    (clears pendingCrossCheck without switching). The
+                    dismiss path matters because not every chime-in needs
+                    to be answered. */}
+                <div className="grid grid-cols-[1fr_auto] border-t border-cosmos-border/30">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleClick(p.id);
+                    }}
+                    className={`px-4 py-2.5 ${c.activeBg} ${c.activeText} text-[12px] font-semibold hover:brightness-110 active:brightness-95 transition-all flex items-center justify-center gap-2`}
+                  >
+                    Take the call
+                    <span className="text-[10px]">→</span>
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      clearPendingCrossCheck();
+                    }}
+                    className="px-4 py-2.5 text-cosmos-muted/70 text-[11px] font-medium hover:text-cosmos-text transition-colors border-l border-cosmos-border/30"
+                    title="Dismiss this chime-in"
+                  >
+                    Not now
+                  </button>
+                </div>
               </motion.div>
             )}
           </div>
