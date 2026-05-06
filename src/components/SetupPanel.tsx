@@ -277,6 +277,9 @@ function SetupCharacter({ thinking }: { thinking: boolean }) {
         <div className="text-[11px] text-cosmos-muted/50 mt-1.5 max-w-[260px] mx-auto leading-relaxed">
           {thinking ? "thinking..." : "asks the questions that sharpen yours"}
         </div>
+        <div className="text-[10px] text-cosmos-muted/40 mt-2 max-w-[240px] mx-auto leading-relaxed italic">
+          May ask follow-ups to clarify the context or pull in more detail.
+        </div>
       </div>
     </div>
   );
@@ -992,8 +995,11 @@ export default function SetupPanel({ onReady, onSummonPersona, examples }: Props
         </div>
 
         {/* Initial prompt */}
-        <p className="text-cosmos-text text-base font-medium leading-relaxed mb-4">
+        <p className="text-cosmos-text text-base font-medium leading-relaxed mb-1">
           What are you trying to decide?
+        </p>
+        <p className="text-[11px] text-cosmos-muted/55 italic mb-4 leading-relaxed">
+          Setup may ask a few follow-ups to clarify the context or pull in more detail before handing you to the cast.
         </p>
 
         {/* Input */}
@@ -1113,7 +1119,7 @@ export default function SetupPanel({ onReady, onSummonPersona, examples }: Props
           <PersonaStrip activeId="setup" />
 
           {/* LEFT: Persona character — half the screen */}
-          <div className="md:w-1/2 h-1/3 md:h-full relative bg-gradient-to-br from-cosmos-bg via-cosmos-surface/30 to-cosmos-bg border-b md:border-b-0 md:border-r border-cosmos-border/30">
+          <div className="md:w-1/2 h-1/3 md:h-full relative bg-gradient-to-br from-cosmos-bg via-cosmos-surface/30 to-cosmos-bg">
             <SetupCharacter thinking={briefLoading} />
           </div>
 

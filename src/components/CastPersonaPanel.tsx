@@ -771,7 +771,7 @@ export default function CastPersonaPanel({ persona, onComplete, onClose }: Props
           {/* LEFT: persona character (during conversation) or next-suggestions
               picker (once this persona is ready). The picker shows up to 3 big
               avatars; clicking one switches the panel to that persona. */}
-          <div className={`md:w-1/2 h-1/3 md:h-full relative bg-gradient-to-br ${colors.characterGradientFrom} via-cosmos-surface/30 ${colors.characterGradientTo} border-b md:border-b-0 md:border-r border-cosmos-border/30`}>
+          <div className={`md:w-1/2 h-1/3 md:h-full relative bg-gradient-to-br ${colors.characterGradientFrom} via-cosmos-surface/30 ${colors.characterGradientTo}`}>
             {ready && nextSuggestions.length > 0 ? (
               <div className="relative w-full h-full flex flex-col items-center justify-center px-6 py-10">
                 <div className="text-[10px] text-cosmos-muted/60 uppercase tracking-[0.3em] mb-2">
